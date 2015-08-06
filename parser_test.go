@@ -104,7 +104,7 @@ var parserCases = []*parserCase{
 			{CODE_BLOCK, "```"}, {NEWLINE, "\n"}, {TEXT, "Some code "}, {EM, "*"}, {CODE_BLOCK, "```"},
 		},
 		[]*html.Token{
-			startPre, startCode, text("Some code *"), endCode, endPre,
+			startPre, startCode, text("\nSome code *\n"), endCode, endPre,
 		},
 	},
 	{
@@ -179,8 +179,4 @@ func TestParser(t *testing.T) {
 			t.Errorf("got:\n%v\nwant:\n%v", got, c.want)
 		}
 	}
-}
-
-func text(s string) *html.Token {
-	return &html.Token{Type: html.TextToken, Data: s}
 }

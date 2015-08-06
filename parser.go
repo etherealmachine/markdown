@@ -8,54 +8,6 @@ import (
 	"strings"
 )
 
-var (
-	startH1   = &html.Token{Type: html.StartTagToken, DataAtom: atom.H1, Data: "h1"}
-	endH1     = &html.Token{Type: html.EndTagToken, DataAtom: atom.H1, Data: "h1"}
-	startH2   = &html.Token{Type: html.StartTagToken, DataAtom: atom.H2, Data: "h2"}
-	endH2     = &html.Token{Type: html.EndTagToken, DataAtom: atom.H2, Data: "h2"}
-	startH3   = &html.Token{Type: html.StartTagToken, DataAtom: atom.H3, Data: "h3"}
-	endH3     = &html.Token{Type: html.EndTagToken, DataAtom: atom.H3, Data: "h3"}
-	startH4   = &html.Token{Type: html.StartTagToken, DataAtom: atom.H4, Data: "h4"}
-	endH4     = &html.Token{Type: html.EndTagToken, DataAtom: atom.H4, Data: "h4"}
-	startH5   = &html.Token{Type: html.StartTagToken, DataAtom: atom.H5, Data: "h5"}
-	endH5     = &html.Token{Type: html.EndTagToken, DataAtom: atom.H5, Data: "h5"}
-	startH6   = &html.Token{Type: html.StartTagToken, DataAtom: atom.H6, Data: "h6"}
-	endH6     = &html.Token{Type: html.EndTagToken, DataAtom: atom.H6, Data: "h6"}
-	hStartTag = map[Token]*html.Token{
-		H1: startH1,
-		H2: startH2,
-		H3: startH3,
-		H4: startH4,
-		H5: startH5,
-		H6: startH6,
-	}
-	hEndTag = map[Token]*html.Token{
-		H1: endH1,
-		H2: endH2,
-		H3: endH3,
-		H4: endH4,
-		H5: endH5,
-		H6: endH6,
-	}
-	endA        = &html.Token{Type: html.EndTagToken, DataAtom: atom.A, Data: "a"}
-	startCode   = &html.Token{Type: html.StartTagToken, DataAtom: atom.Code, Data: "code"}
-	endCode     = &html.Token{Type: html.EndTagToken, DataAtom: atom.Code, Data: "code"}
-	startPre    = &html.Token{Type: html.StartTagToken, DataAtom: atom.Pre, Data: "pre"}
-	endPre      = &html.Token{Type: html.EndTagToken, DataAtom: atom.Pre, Data: "pre"}
-	startP      = &html.Token{Type: html.StartTagToken, DataAtom: atom.P, Data: "p"}
-	endP        = &html.Token{Type: html.EndTagToken, DataAtom: atom.P, Data: "p"}
-	startOl     = &html.Token{Type: html.StartTagToken, DataAtom: atom.Ol, Data: "ol"}
-	endOl       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Ol, Data: "ol"}
-	startUl     = &html.Token{Type: html.StartTagToken, DataAtom: atom.Ul, Data: "ul"}
-	endUl       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Ul, Data: "ul"}
-	startLi     = &html.Token{Type: html.StartTagToken, DataAtom: atom.Li, Data: "li"}
-	endLi       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Li, Data: "li"}
-	startEm     = &html.Token{Type: html.StartTagToken, DataAtom: atom.Em, Data: "em"}
-	endEm       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Em, Data: "em"}
-	startStrong = &html.Token{Type: html.StartTagToken, DataAtom: atom.Strong, Data: "strong"}
-	endStrong   = &html.Token{Type: html.EndTagToken, DataAtom: atom.Strong, Data: "strong"}
-)
-
 type scanner interface {
 	Next() (Token, string)
 }
@@ -81,6 +33,7 @@ func (p *Parser) parse() {
 			fmt.Println(err)
 		}
 	}()
+	_ = "breakpoint"
 	for tok, lit := p.scanner.Next(); tok != EOF; tok, lit = p.scanner.Next() {
 		p.consume(tok, lit)
 	}
@@ -282,7 +235,8 @@ func (p *Parser) parseCodeBlock() {
 		}
 		buf.WriteString(lit)
 	}
-	p.tokens = append(p.tokens, text(buf.String()))
+	code := strings.Trim(buf.String(), "\n")
+	p.tokens = append(p.tokens, text("\n"+code+"\n"))
 	p.tokens = append(p.tokens, endCode)
 	p.tokens = append(p.tokens, endPre)
 }

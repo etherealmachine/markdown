@@ -17,6 +17,9 @@ var scannerCases = []*scannerCase{
 	{"## Some header", []Token{
 		H2, TEXT,
 	}},
+	{"# Non-unix line endings\r\nMore stuff\n\r", []Token{
+		H1, TEXT, NEWLINE, TEXT, NEWLINE,
+	}},
 	{"[a link](www.example.com)", []Token{
 		LINK_TEXT, HREF,
 	}},

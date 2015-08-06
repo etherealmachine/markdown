@@ -1,6 +1,7 @@
 package markdown
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
@@ -24,31 +25,31 @@ var testCases = []testCase{
 	},
 	{
 		"[a link](www.example.com)",
-		`<p><a href="www.example.com">a link</a></p>`,
+		"<p>\n\t<a href=\"www.example.com\">a link</a>\n</p>",
 	},
 	{
 		"# [A link in a header](www.example.com)",
-		`<h1><a href="www.example.com">A link in a header</a></h1>`,
+		"<h1>\n\t<a href=\"www.example.com\">A link in a header</a>\n</h1>",
 	},
 	{
 		"![An img](www.example.com)",
-		`<p><img alt="An img" src="www.example.com"/></p>`,
+		"<p>\n\t<img alt=\"An img\" src=\"www.example.com\"/>\n</p>",
 	},
 	{
 		"A paragraph of text\npossibly on multiple\nlines.",
 		"<p>A paragraph of text\npossibly on multiple\nlines.</p>",
 	},
 	{
-		`<a href="www.example.com" rel="nofollow">Some HTML</a>`,
-		`<p><a href="www.example.com" rel="nofollow">Some HTML</a></p>`,
+		"<a href=\"www.example.com\" rel=\"nofollow\">Some HTML</a>",
+		"<p>\n\t<a href=\"www.example.com\" rel=\"nofollow\">Some HTML</a>\n</p>",
 	},
 	{
 		"`some code`",
-		"<p><code>some code</code></p>",
+		"<p>\n\t<code>some code</code>\n</p>",
 	},
 	{
 		"```javascript\nA block of code\n```",
-		"<pre><code class=\"javascript\">\nA block of code\n</code></pre>",
+		"<pre>\n\t<code class=\"javascript\">\nA block of code\n</code>\n</pre>",
 	},
 }
 
@@ -80,8 +81,14 @@ func TestMarkdown(t *testing.T) {
 			examples[i].want = string(buf)
 		}
 	}
-	for _, c := range examples {
-		testCases = append(testCases, *c)
+	for i, c := range examples {
+		if got := Markdown(c.input); got != c.want {
+			if err := ioutil.WriteFile(fmt.Sprintf("example%d.out", i), []byte(got), 0644); err != nil {
+				t.Errorf("error writing example%d.out", i)
+			} else {
+				t.Errorf("see example%d.out", i)
+			}
+		}
 	}
 	for _, c := range testCases {
 		if got := Markdown(c.input); got != c.want {

@@ -121,6 +121,7 @@ func (s *Scanner) next() (Token, string) {
 				s.src.UnreadRune()
 			}
 			buf.WriteRune(r)
+		case '\r':
 		case '\n':
 			if buf.Len() != 0 {
 				s.src.UnreadRune()
