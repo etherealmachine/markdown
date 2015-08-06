@@ -54,11 +54,6 @@ var scannerCases = []*scannerCase{
 		ORDERED_LIST, TEXT, NEWLINE,
 		ORDERED_LIST, TEXT, NEWLINE,
 	}},
-	/*
-		{"[[define panel]]\n[[title]]\n[[body]]\n[[end]]\n", []Token{
-			TMPL_DEF, NEWLINE, TMPL_VAL, NEWLINE, TMPL_VAL, TMPL_END,
-		}},
-	*/
 }
 
 func TestScanner(t *testing.T) {
