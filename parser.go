@@ -2,31 +2,27 @@ package markdown
 
 import (
 	"bytes"
+	"fmt"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"strings"
 )
 
 type scanner interface {
-	Next() (Token, string)
-}
-
-type token struct {
-	tok Token
-	lit string
+	Next() *Tok
 }
 
 type ErrUnexpectedToken struct {
-	token Token
+	tok *Tok
 }
 
 func (e ErrUnexpectedToken) Error() string {
-	return e.token.String()
+	return fmt.Sprintf("%v", e.tok)
 }
 
 type Parser struct {
 	pos        int
-	input      []*token
+	input      []*Tok
 	tokens     []*html.Token
 	inlineMode bool
 	saved      savePoint
@@ -44,11 +40,11 @@ func Parse(input string) []*html.Token {
 }
 
 func (p *Parser) parse(scanner scanner) {
-	for tok, lit := scanner.Next(); tok != EOF; tok, lit = scanner.Next() {
-		p.input = append(p.input, &token{tok, lit})
+	for tok := scanner.Next(); tok.Tok != EOF; tok = scanner.Next() {
+		p.input = append(p.input, tok)
 	}
-	for tok, lit := p.next(); tok != EOF; tok, lit = p.next() {
-		p.consume(tok, lit)
+	for tok := p.next(); tok.Tok != EOF; tok = p.next() {
+		p.consume(tok)
 	}
 	if p.inlineMode {
 		p.append(endP)
@@ -56,12 +52,12 @@ func (p *Parser) parse(scanner scanner) {
 	}
 }
 
-func (p *Parser) consume(tok Token, lit string) {
+func (p *Parser) consume(tok *Tok) {
 	p.save()
 	var err error
-	switch tok {
+	switch tok.Tok {
 	case H1, H2, H3, H4, H5, H6:
-		p.parseHeader(tok)
+		p.parseHeader(tok.Tok)
 	case EM:
 		err = p.parseEm()
 	case STRONG:
@@ -69,19 +65,19 @@ func (p *Parser) consume(tok Token, lit string) {
 	case NEWLINE:
 		p.parseNewline()
 	case TEXT:
-		p.parseText(lit)
+		p.parseText(tok.Lit)
 	case LINK_TEXT:
-		err = p.parseLink(lit)
+		err = p.parseLink(tok.Lit)
 	case IMG_ALT:
-		err = p.parseImg(lit)
+		err = p.parseImg(tok.Lit)
 	case CODE:
 		err = p.parseCode()
 	case CODE_BLOCK:
 		err = p.parseCodeBlock()
 	case HTML_START:
-		err = p.parseHTMLStart(lit)
+		err = p.parseHTMLStart(tok.Lit)
 	case HTML_END_TAG:
-		p.parseHTMLEnd(lit)
+		p.parseHTMLEnd(tok.Lit)
 	case ORDERED_LIST:
 		p.parseOrderedList()
 	case UNORDERED_LIST:
@@ -93,11 +89,11 @@ func (p *Parser) consume(tok Token, lit string) {
 }
 
 func (p *Parser) expect(tok Token) (string, error) {
-	t, lit := p.next()
-	if t != tok {
+	t := p.next()
+	if t.Tok != tok {
 		return "", ErrUnexpectedToken{t}
 	}
-	return lit, nil
+	return t.Lit, nil
 }
 
 func (p *Parser) save() {
@@ -109,19 +105,19 @@ func (p *Parser) save() {
 func (p *Parser) revert() {
 	var buf bytes.Buffer
 	for i := p.saved.pos; i <= p.pos && i < len(p.input); i++ {
-		buf.WriteString(p.input[i].lit)
+		buf.WriteString(p.input[i].Raw)
 	}
 	p.tokens = p.tokens[:p.saved.tokenCount]
 	p.inlineMode = p.saved.inlineMode
 	p.parseText(buf.String())
 }
 
-func (p *Parser) next() (Token, string) {
+func (p *Parser) next() *Tok {
 	if p.pos >= len(p.input) {
-		return EOF, "EOF"
+		return &Tok{EOF, "EOF", ""}
 	}
 	p.pos++
-	return p.input[p.pos-1].tok, p.input[p.pos-1].lit
+	return p.input[p.pos-1]
 }
 
 func (p *Parser) append(tok *html.Token) {
@@ -152,8 +148,8 @@ func (p *Parser) block() {
 func (p *Parser) parseHeader(headerToken Token) {
 	p.append(hStartTag[headerToken])
 	p.inlineMode = true
-	for tok, lit := p.next(); tok != NEWLINE && tok != EOF; tok, lit = p.next() {
-		p.consume(tok, lit)
+	for tok := p.next(); tok.Tok != NEWLINE && tok.Tok != EOF; tok = p.next() {
+		p.consume(tok)
 	}
 	p.append(hEndTag[headerToken])
 	p.inlineMode = false
@@ -163,11 +159,11 @@ func (p *Parser) parseEm() error {
 	p.inline()
 	p.append(startEm)
 	var buf bytes.Buffer
-	for tok, lit := p.next(); tok != EM; tok, lit = p.next() {
-		if tok == NEWLINE && tok == EOF {
+	for tok := p.next(); tok.Tok != EM; tok = p.next() {
+		if tok.Tok == NEWLINE && tok.Tok == EOF {
 			return ErrUnexpectedToken{tok}
 		}
-		buf.WriteString(lit)
+		buf.WriteString(tok.Lit)
 	}
 	p.append(text(buf.String()))
 	p.append(endEm)
@@ -178,11 +174,11 @@ func (p *Parser) parseStrong() error {
 	p.inline()
 	p.append(startStrong)
 	var buf bytes.Buffer
-	for tok, lit := p.next(); tok != STRONG; tok, lit = p.next() {
-		if tok == NEWLINE && tok == EOF {
+	for tok := p.next(); tok.Tok != STRONG; tok = p.next() {
+		if tok.Tok == NEWLINE && tok.Tok == EOF {
 			return ErrUnexpectedToken{tok}
 		}
-		buf.WriteString(lit)
+		buf.WriteString(tok.Lit)
 	}
 	p.append(text(buf.String()))
 	p.append(endStrong)
@@ -190,12 +186,12 @@ func (p *Parser) parseStrong() error {
 }
 
 func (p *Parser) parseNewline() {
-	tok, lit := p.next()
-	if tok == NEWLINE {
+	tok := p.next()
+	if tok.Tok == NEWLINE {
 		p.block()
 	} else {
 		p.tokens = append(p.tokens, text("\n"))
-		p.consume(tok, lit)
+		p.consume(tok)
 	}
 }
 
@@ -260,26 +256,26 @@ func (p *Parser) parseCode() error {
 func (p *Parser) parseCodeBlock() error {
 	p.append(startPre)
 	var buf bytes.Buffer
-	tok, lit := p.next()
-	if tok == TEXT {
+	tok := p.next()
+	if tok.Tok == TEXT {
 		p.tokens = append(p.tokens, &html.Token{
 			Type:     html.StartTagToken,
 			DataAtom: atom.Code,
 			Data:     "code",
 			Attr: []html.Attribute{
-				{Key: "class", Val: lit},
+				{Key: "class", Val: tok.Lit},
 			},
 		})
-	} else if tok == NEWLINE {
+	} else if tok.Tok == NEWLINE {
 		p.append(startCode)
 	} else {
 		return ErrUnexpectedToken{tok}
 	}
-	for tok, lit = p.next(); tok != CODE_BLOCK; tok, lit = p.next() {
-		if tok == EOF {
+	for tok = p.next(); tok.Tok != CODE_BLOCK; tok = p.next() {
+		if tok.Tok == EOF {
 			return ErrUnexpectedToken{tok}
 		}
-		buf.WriteString(lit)
+		buf.WriteString(tok.Raw)
 	}
 	code := strings.Trim(buf.String(), "\n")
 	p.append(text("\n" + code + "\n"))
@@ -289,15 +285,13 @@ func (p *Parser) parseCodeBlock() error {
 }
 
 func (p *Parser) parseHTMLStart(start string) error {
-	text, err := p.expect(TEXT)
-	if err != nil {
-		return err
+	var buf bytes.Buffer
+	buf.WriteRune('<')
+	for tok := p.next(); tok.Tok != HTML_END; tok = p.next() {
+		buf.WriteString(tok.Raw)
 	}
-	end, err := p.expect(HTML_END)
-	if err != nil {
-		return err
-	}
-	tt := html.NewTokenizer(strings.NewReader(start + text + end))
+	buf.WriteRune('>')
+	tt := html.NewTokenizer(&buf)
 	tt.Next()
 	tok := tt.Token()
 	if !p.inlineMode && !blockTag[tok.DataAtom] {
@@ -326,22 +320,22 @@ func (p *Parser) parseOrderedList() {
 	p.append(startLi)
 	p.inlineMode = true
 	for {
-		tok, lit := p.next()
-		switch tok {
+		tok := p.next()
+		switch tok.Tok {
 		case EOF:
 			break
 		case NEWLINE:
-			tok, lit = p.next()
-			if tok == ORDERED_LIST {
+			tok = p.next()
+			if tok.Tok == ORDERED_LIST {
 				p.append(endLi)
 				p.append(startLi)
-			} else if tok == EOF || tok == NEWLINE {
+			} else if tok.Tok == EOF || tok.Tok == NEWLINE {
 				goto EmitEnd
 			} else {
-				p.consume(tok, lit)
+				p.consume(tok)
 			}
 		default:
-			p.consume(tok, lit)
+			p.consume(tok)
 		}
 	}
 EmitEnd:
@@ -355,22 +349,22 @@ func (p *Parser) parseUnorderedList() {
 	p.append(startLi)
 	p.inlineMode = true
 	for {
-		tok, lit := p.next()
-		switch tok {
+		tok := p.next()
+		switch tok.Tok {
 		case EOF:
 			break
 		case NEWLINE:
-			tok, lit = p.next()
-			if tok == UNORDERED_LIST {
+			tok = p.next()
+			if tok.Tok == UNORDERED_LIST {
 				p.append(endLi)
 				p.append(startLi)
-			} else if tok == EOF || tok == NEWLINE {
+			} else if tok.Tok == EOF || tok.Tok == NEWLINE {
 				goto EmitEnd
 			} else {
-				p.consume(tok, lit)
+				p.consume(tok)
 			}
 		default:
-			p.consume(tok, lit)
+			p.consume(tok)
 		}
 	}
 EmitEnd:

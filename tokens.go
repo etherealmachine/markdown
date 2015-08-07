@@ -2,6 +2,16 @@ package markdown
 
 type Token int
 
+type Tok struct {
+	Tok Token
+	Lit string
+	Raw string
+}
+
+func (t *Tok) Tuple() (Token, string, string) {
+	return t.Tok, t.Lit, t.Raw
+}
+
 const (
 	EOF = iota
 	H1

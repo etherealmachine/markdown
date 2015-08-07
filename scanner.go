@@ -9,6 +9,7 @@ import (
 type Scanner struct {
 	src  io.RuneScanner
 	prev Token
+	buf  bytes.Buffer
 }
 
 func NewScanner(src string) *Scanner {
@@ -18,121 +19,125 @@ func NewScanner(src string) *Scanner {
 	}
 }
 
-func (s *Scanner) Next() (Token, string) {
-	tok, lit := s.next()
-	s.prev = tok
-	return tok, lit
+func (s *Scanner) Next() *Tok {
+	tok := s.next()
+	s.prev = tok.Tok
+	return tok
 }
 
-func (s *Scanner) next() (Token, string) {
-	var buf bytes.Buffer
+var specialRunes = map[rune]bool{
+	'#':  true,
+	'*':  true,
+	'_':  true,
+	'!':  true,
+	'[':  true,
+	'`':  true,
+	'<':  true,
+	'>':  true,
+	'1':  true,
+	'2':  true,
+	'3':  true,
+	'4':  true,
+	'5':  true,
+	'6':  true,
+	'7':  true,
+	'8':  true,
+	'9':  true,
+	'\r': true,
+	'\n': true,
+}
+
+func (s *Scanner) next() *Tok {
 	for {
 		r, _, err := s.src.ReadRune()
 		if err == io.EOF {
-			if buf.Len() != 0 {
-				s.src.UnreadRune()
-				return TEXT, buf.String()
+			if tok := s.drainText(); tok != nil {
+				return tok
 			}
-			return EOF, ""
+			return &Tok{EOF, "EOF", ""}
+		}
+		if specialRunes[r] {
+			if tok := s.drainText(); tok != nil {
+				return tok
+			}
 		}
 		switch r {
 		case '#':
-			if buf.Len() != 0 {
-				s.src.UnreadRune()
-				return TEXT, buf.String()
-			}
 			return s.scanHeader()
 		case '*':
-			if buf.Len() != 0 {
-				s.src.UnreadRune()
-				return TEXT, buf.String()
-			}
 			if next, _, _ := s.src.ReadRune(); next == '*' {
-				return STRONG, "__"
+				return &Tok{STRONG, "**", "**"}
 			} else if (s.prev == EOF || s.prev == NEWLINE) && next == ' ' {
-				return UNORDERED_LIST, "* "
+				return &Tok{UNORDERED_LIST, "* ", "* "}
 			}
 			s.src.UnreadRune()
-			return EM, "_"
+			return &Tok{EM, "*", "*"}
 		case '_':
-			if buf.Len() != 0 {
-				s.src.UnreadRune()
-				return TEXT, buf.String()
-			}
 			if next, _, _ := s.src.ReadRune(); next == '_' {
-				return STRONG, "__"
+				return &Tok{STRONG, "__", "__"}
 			}
 			s.src.UnreadRune()
-			return EM, "_"
+			return &Tok{EM, "_", "_"}
 		case '!':
 			if next, _, _ := s.src.ReadRune(); next == '[' {
 				return s.scanImgAlt()
 			}
 			s.src.UnreadRune()
-			buf.WriteRune(r)
+			s.buf.WriteRune(r)
 		case '[':
-			if buf.Len() != 0 {
-				s.src.UnreadRune()
-				return TEXT, buf.String()
-			}
 			return s.scanLinkText()
 		case '(':
 			if s.prev == LINK_TEXT || s.prev == IMG_ALT {
 				return s.scanHref()
 			}
-			buf.WriteRune(r)
+			s.buf.WriteRune(r)
 		case '`':
-			if buf.Len() != 0 {
-				s.src.UnreadRune()
-				return TEXT, buf.String()
-			}
 			if next, _, _ := s.src.ReadRune(); next == '`' {
 				if next, _, _ = s.src.ReadRune(); next == '`' {
-					return CODE_BLOCK, "```"
+					return &Tok{CODE_BLOCK, "```", "```"}
 				}
 				s.src.UnreadRune()
 			}
 			s.src.UnreadRune()
-			return CODE, "`"
+			return &Tok{CODE, "`", "`"}
 		case '<':
-			if buf.Len() != 0 {
-				s.src.UnreadRune()
-				return TEXT, buf.String()
-			}
 			if next, _, _ := s.src.ReadRune(); next == '/' {
 				return s.scanHtmlEndTag()
 			}
 			s.src.UnreadRune()
-			return HTML_START, "<"
+			return &Tok{HTML_START, "<", "<"}
 		case '>':
-			if buf.Len() != 0 {
-				s.src.UnreadRune()
-				return TEXT, buf.String()
-			}
-			return HTML_END, ">"
+			return &Tok{HTML_END, ">", ">"}
 		case '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			if s.prev == EOF || s.prev == NEWLINE {
 				if next, _, _ := s.src.ReadRune(); next == '.' {
 					if next, _, _ = s.src.ReadRune(); next == ' ' {
-						return ORDERED_LIST, string([]rune{r, '.', ' '})
+						numeral := string([]rune{r, '.', ' '})
+						return &Tok{ORDERED_LIST, numeral, numeral}
 					}
 					s.src.UnreadRune()
 				}
 				s.src.UnreadRune()
 			}
-			buf.WriteRune(r)
+			s.buf.WriteRune(r)
 		case '\r':
 		case '\n':
-			if buf.Len() != 0 {
-				s.src.UnreadRune()
-				return TEXT, buf.String()
-			}
-			return NEWLINE, "\n"
+			return &Tok{NEWLINE, "\n", "\n"}
 		default:
-			buf.WriteRune(r)
+			s.buf.WriteRune(r)
 		}
 	}
-	return EOF, "EOF"
+	return nil
+}
+
+func (s *Scanner) drainText() *Tok {
+	if s.buf.Len() != 0 {
+		s.src.UnreadRune()
+		text := s.buf.String()
+		s.buf.Reset()
+		return &Tok{TEXT, text, text}
+	}
+	return nil
 }
 
 func (s *Scanner) peek() rune {
@@ -144,13 +149,13 @@ func (s *Scanner) peek() rune {
 	return next
 }
 
-func (s *Scanner) scanHeader() (Token, string) {
+func (s *Scanner) scanHeader() *Tok {
 	lit := bytes.NewBufferString("#")
 	count := 1
 	for {
 		r, _, err := s.src.ReadRune()
 		if err != nil {
-			return EOF, "EOF"
+			return &Tok{EOF, "EOF", ""}
 		}
 		if r == '#' {
 			lit.WriteByte('#')
@@ -160,18 +165,21 @@ func (s *Scanner) scanHeader() (Token, string) {
 			break
 		}
 	}
+	header := lit.String()
+	raw := header
 	for s.peek() == ' ' {
+		raw += " "
 		s.src.ReadRune()
 	}
-	return headers[count], lit.String()
+	return &Tok{headers[count], header, raw}
 }
 
-func (s *Scanner) scanLinkText() (Token, string) {
+func (s *Scanner) scanLinkText() *Tok {
 	var lit bytes.Buffer
 	for {
 		r, _, err := s.src.ReadRune()
 		if err != nil {
-			return EOF, "EOF"
+			return &Tok{EOF, "EOF", ""}
 		}
 		if r != ']' {
 			lit.WriteRune(r)
@@ -179,15 +187,17 @@ func (s *Scanner) scanLinkText() (Token, string) {
 			break
 		}
 	}
-	return LINK_TEXT, lit.String()
+	text := lit.String()
+	raw := "[" + text + "]"
+	return &Tok{LINK_TEXT, text, raw}
 }
 
-func (s *Scanner) scanImgAlt() (Token, string) {
+func (s *Scanner) scanImgAlt() *Tok {
 	var lit bytes.Buffer
 	for {
 		r, _, err := s.src.ReadRune()
 		if err != nil {
-			return EOF, "EOF"
+			return &Tok{EOF, "EOF", ""}
 		}
 		if r != ']' {
 			lit.WriteRune(r)
@@ -195,15 +205,17 @@ func (s *Scanner) scanImgAlt() (Token, string) {
 			break
 		}
 	}
-	return IMG_ALT, lit.String()
+	alt := lit.String()
+	raw := "![" + alt + "]"
+	return &Tok{IMG_ALT, alt, raw}
 }
 
-func (s *Scanner) scanHref() (Token, string) {
+func (s *Scanner) scanHref() *Tok {
 	var lit bytes.Buffer
 	for {
 		r, _, err := s.src.ReadRune()
 		if err != nil {
-			return EOF, "EOF"
+			return &Tok{EOF, "EOF", ""}
 		}
 		if r != ')' {
 			lit.WriteRune(r)
@@ -211,15 +223,17 @@ func (s *Scanner) scanHref() (Token, string) {
 			break
 		}
 	}
-	return HREF, lit.String()
+	href := lit.String()
+	raw := "(" + href + ")"
+	return &Tok{HREF, href, raw}
 }
 
-func (s *Scanner) scanHtmlEndTag() (Token, string) {
+func (s *Scanner) scanHtmlEndTag() *Tok {
 	var lit bytes.Buffer
 	for {
 		r, _, err := s.src.ReadRune()
 		if err != nil {
-			return EOF, "EOF"
+			return &Tok{EOF, "EOF", ""}
 		}
 		if r != '>' {
 			lit.WriteRune(r)
@@ -227,5 +241,7 @@ func (s *Scanner) scanHtmlEndTag() (Token, string) {
 			break
 		}
 	}
-	return HTML_END_TAG, lit.String()
+	inner := lit.String()
+	raw := "<" + inner + ">"
+	return &Tok{HTML_END_TAG, inner, raw}
 }

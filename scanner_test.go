@@ -60,7 +60,7 @@ func TestScanner(t *testing.T) {
 	for _, c := range scannerCases {
 		scanner := NewScanner(c.input)
 		var got []Token
-		for tok, _ := scanner.Next(); tok != EOF; tok, _ = scanner.Next() {
+		for tok, _, _ := scanner.Next().Tuple(); tok != EOF; tok, _, _ = scanner.Next().Tuple() {
 			got = append(got, tok)
 		}
 		if !reflect.DeepEqual(got, c.want) {
