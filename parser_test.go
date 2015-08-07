@@ -7,11 +7,6 @@ import (
 	"testing"
 )
 
-type token struct {
-	tok Token
-	lit string
-}
-
 type fakeScanner struct {
 	pos  int
 	toks []token
@@ -172,8 +167,8 @@ var parserCases = []*parserCase{
 
 func TestParser(t *testing.T) {
 	for _, c := range parserCases {
-		p := &Parser{scanner: &fakeScanner{toks: c.input}}
-		p.parse()
+		p := &Parser{}
+		p.parse(&fakeScanner{toks: c.input})
 		got := p.tokens
 		if !reflect.DeepEqual(got, c.want) {
 			t.Errorf("got:\n%v\nwant:\n%v", got, c.want)

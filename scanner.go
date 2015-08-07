@@ -138,7 +138,7 @@ func (s *Scanner) next() (Token, string) {
 func (s *Scanner) peek() rune {
 	next, _, err := s.src.ReadRune()
 	s.src.UnreadRune()
-	if err == io.EOF {
+	if err != nil {
 		return ' '
 	}
 	return next
@@ -149,8 +149,8 @@ func (s *Scanner) scanHeader() (Token, string) {
 	count := 1
 	for {
 		r, _, err := s.src.ReadRune()
-		if err == io.EOF {
-			panic("EOF")
+		if err != nil {
+			return EOF, "EOF"
 		}
 		if r == '#' {
 			lit.WriteByte('#')
@@ -170,8 +170,8 @@ func (s *Scanner) scanLinkText() (Token, string) {
 	var lit bytes.Buffer
 	for {
 		r, _, err := s.src.ReadRune()
-		if err == io.EOF {
-			panic("EOF")
+		if err != nil {
+			return EOF, "EOF"
 		}
 		if r != ']' {
 			lit.WriteRune(r)
@@ -186,8 +186,8 @@ func (s *Scanner) scanImgAlt() (Token, string) {
 	var lit bytes.Buffer
 	for {
 		r, _, err := s.src.ReadRune()
-		if err == io.EOF {
-			panic("EOF")
+		if err != nil {
+			return EOF, "EOF"
 		}
 		if r != ']' {
 			lit.WriteRune(r)
@@ -202,8 +202,8 @@ func (s *Scanner) scanHref() (Token, string) {
 	var lit bytes.Buffer
 	for {
 		r, _, err := s.src.ReadRune()
-		if err == io.EOF {
-			panic("EOF")
+		if err != nil {
+			return EOF, "EOF"
 		}
 		if r != ')' {
 			lit.WriteRune(r)
@@ -218,8 +218,8 @@ func (s *Scanner) scanHtmlEndTag() (Token, string) {
 	var lit bytes.Buffer
 	for {
 		r, _, err := s.src.ReadRune()
-		if err == io.EOF {
-			panic("EOF")
+		if err != nil {
+			return EOF, "EOF"
 		}
 		if r != '>' {
 			lit.WriteRune(r)

@@ -82,6 +82,9 @@ func TestMarkdown(t *testing.T) {
 		}
 	}
 	for i, c := range examples {
+		if i == 2 {
+			_ = "breakpoint"
+		}
 		if got := Markdown(c.input); got != c.want {
 			if err := ioutil.WriteFile(fmt.Sprintf("example%d.out", i), []byte(got), 0644); err != nil {
 				t.Errorf("error writing example%d.out", i)
