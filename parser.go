@@ -160,7 +160,7 @@ func (p *Parser) parseEm() error {
 	p.append(startEm)
 	var buf bytes.Buffer
 	for tok := p.next(); tok.Tok != EM; tok = p.next() {
-		if tok.Tok == NEWLINE && tok.Tok == EOF {
+		if tok.Tok == NEWLINE || tok.Tok == EOF {
 			return ErrUnexpectedToken{tok}
 		}
 		buf.WriteString(tok.Lit)
@@ -175,7 +175,7 @@ func (p *Parser) parseStrong() error {
 	p.append(startStrong)
 	var buf bytes.Buffer
 	for tok := p.next(); tok.Tok != STRONG; tok = p.next() {
-		if tok.Tok == NEWLINE && tok.Tok == EOF {
+		if tok.Tok == NEWLINE || tok.Tok == EOF {
 			return ErrUnexpectedToken{tok}
 		}
 		buf.WriteString(tok.Lit)
