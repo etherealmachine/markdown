@@ -90,7 +90,7 @@ func matchHeader(s string) *Tok {
 	return &Tok{headers[len(groups[1])], groups[1], groups[0]}
 }
 
-var orderedListMatcher = groupMatcher(regexp.MustCompile(`^\n*([\t ]*)\d+\. `), ORDERED_LIST)
+var orderedListMatcher = groupMatcher(regexp.MustCompile(`^\n*([\t ]*)\d+\.[\t ]+`), ORDERED_LIST)
 
 func (s *Scanner) matchOrderedList(str string) *Tok {
 	if !(s.pos == 0 || s.inOl || (len(str) >= 2 && str[0] == '\n' && str[1] == '\n')) {
@@ -103,7 +103,7 @@ func (s *Scanner) matchOrderedList(str string) *Tok {
 	return nil
 }
 
-var unorderedListMatcher = groupMatcher(regexp.MustCompile(`^\n*([\t ]*)[*-] `), UNORDERED_LIST)
+var unorderedListMatcher = groupMatcher(regexp.MustCompile(`^\n*([\t ]*)[*-][\t ]+`), UNORDERED_LIST)
 
 func (s *Scanner) matchUnorderedList(str string) *Tok {
 	if !(s.pos == 0 || s.inUl || (len(str) >= 2 && str[0] == '\n' && str[1] == '\n')) {

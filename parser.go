@@ -80,6 +80,8 @@ func (p *Parser) consume(tok *Tok) {
 		p.parseOrderedList()
 	case UNORDERED_LIST:
 		p.parseUnorderedList()
+	default:
+		p.parseText(tok.Raw)
 	}
 	if err != nil {
 		p.revert()
