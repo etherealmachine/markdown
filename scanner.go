@@ -32,7 +32,8 @@ func NewScanner(src string) *Scanner {
 		groupMatcher(regexp.MustCompile(`^_(.+?)_`), EM),
 		groupMatcher(regexp.MustCompile("^(```)"), CODE_BLOCK),
 		groupMatcher(regexp.MustCompile("^`(.*?)`"), CODE),
-		groupMatcher(regexp.MustCompile("^(<.*?>)"), HTML_TAG),
+		groupMatcher(regexp.MustCompile("(?s)^(<.*?>)"), HTML_TAG),
+		groupMatcher(regexp.MustCompile("^([$].*?[$])"), MATHML),
 	}
 	return s
 }
@@ -50,6 +51,10 @@ func (s *Scanner) Next() *Tok {
 		}
 		if s.pos+1 < len(s.src) && s.src[s.pos] == '\n' && s.src[s.pos+1] == '\n' {
 			s.inOl, s.inUl = false, false
+		}
+		if s.src[s.pos] == '\\' {
+			s.pos += 2
+			continue
 		}
 		for _, match := range s.matchers {
 			if tok := match(s.src[s.pos:]); tok != nil {

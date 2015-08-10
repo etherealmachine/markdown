@@ -40,6 +40,7 @@ const (
 	CODE_BLOCK
 	ORDERED_LIST
 	UNORDERED_LIST
+	MATHML
 )
 
 var tokenNames = map[Token]string{
@@ -62,6 +63,7 @@ var tokenNames = map[Token]string{
 	CODE_BLOCK:     "CODE_BLOCK",
 	ORDERED_LIST:   "ORDERED_LIST",
 	UNORDERED_LIST: "UNORDERED_LIST",
+	MATHML:         "MATHML",
 }
 
 func (t Token) String() string {
