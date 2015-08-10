@@ -59,9 +59,9 @@ func (p *Parser) consume(tok *Tok) {
 	case H1, H2, H3, H4, H5, H6:
 		p.parseHeader(tok.Tok)
 	case EM:
-		err = p.parseEm()
+		p.parseEm(tok.Lit)
 	case STRONG:
-		err = p.parseStrong()
+		p.parseStrong(tok.Lit)
 	case NEWLINE:
 		p.parseNewline()
 	case TEXT:
@@ -71,13 +71,11 @@ func (p *Parser) consume(tok *Tok) {
 	case IMG_ALT:
 		err = p.parseImg(tok.Lit)
 	case CODE:
-		err = p.parseCode()
+		p.parseCode(tok.Lit)
 	case CODE_BLOCK:
 		err = p.parseCodeBlock()
-	case HTML_START:
-		err = p.parseHTMLStart(tok.Lit)
-	case HTML_END_TAG:
-		p.parseHTMLEnd(tok.Lit)
+	case HTML_TAG:
+		p.parseHTMLTag(tok.Lit)
 	case ORDERED_LIST:
 		p.parseOrderedList()
 	case UNORDERED_LIST:
@@ -104,7 +102,7 @@ func (p *Parser) save() {
 
 func (p *Parser) revert() {
 	var buf bytes.Buffer
-	for i := p.saved.pos; i <= p.pos && i < len(p.input); i++ {
+	for i := p.saved.pos; i < p.pos && i < len(p.input); i++ {
 		buf.WriteString(p.input[i].Raw)
 	}
 	p.tokens = p.tokens[:p.saved.tokenCount]
@@ -120,15 +118,15 @@ func (p *Parser) next() *Tok {
 	return p.input[p.pos-1]
 }
 
-func (p *Parser) append(tok *html.Token) {
-	p.tokens = append(p.tokens, tok)
+func (p *Parser) peek() *Tok {
+	if p.pos >= len(p.input) {
+		return &Tok{EOF, "EOF", ""}
+	}
+	return p.input[p.pos]
 }
 
-func (p *Parser) prev() *html.Token {
-	if len(p.tokens) == 0 {
-		return nil
-	}
-	return p.tokens[len(p.tokens)-1]
+func (p *Parser) append(tok *html.Token) {
+	p.tokens = append(p.tokens, tok)
 }
 
 func (p *Parser) inline() {
@@ -148,41 +146,34 @@ func (p *Parser) block() {
 func (p *Parser) parseHeader(headerToken Token) {
 	p.append(hStartTag[headerToken])
 	p.inlineMode = true
-	for tok := p.next(); tok.Tok != NEWLINE && tok.Tok != EOF; tok = p.next() {
-		p.consume(tok)
+	for {
+		next := p.peek()
+		if next.Tok == EOF || next.Tok == NEWLINE {
+			p.next()
+			break
+		}
+		if next.Tok == ORDERED_LIST || next.Tok == UNORDERED_LIST {
+			break
+		}
+		p.next()
+		p.consume(next)
 	}
 	p.append(hEndTag[headerToken])
 	p.inlineMode = false
 }
 
-func (p *Parser) parseEm() error {
+func (p *Parser) parseEm(lit string) {
 	p.inline()
 	p.append(startEm)
-	var buf bytes.Buffer
-	for tok := p.next(); tok.Tok != EM; tok = p.next() {
-		if tok.Tok == NEWLINE || tok.Tok == EOF {
-			return ErrUnexpectedToken{tok}
-		}
-		buf.WriteString(tok.Lit)
-	}
-	p.append(text(buf.String()))
+	p.append(text(lit))
 	p.append(endEm)
-	return nil
 }
 
-func (p *Parser) parseStrong() error {
+func (p *Parser) parseStrong(lit string) {
 	p.inline()
 	p.append(startStrong)
-	var buf bytes.Buffer
-	for tok := p.next(); tok.Tok != STRONG; tok = p.next() {
-		if tok.Tok == NEWLINE || tok.Tok == EOF {
-			return ErrUnexpectedToken{tok}
-		}
-		buf.WriteString(tok.Lit)
-	}
-	p.append(text(buf.String()))
+	p.append(text(lit))
 	p.append(endStrong)
-	return nil
 }
 
 func (p *Parser) parseNewline() {
@@ -238,19 +229,11 @@ func (p *Parser) parseImg(alt string) error {
 	return nil
 }
 
-func (p *Parser) parseCode() error {
+func (p *Parser) parseCode(code string) {
 	p.inline()
-	s, err := p.expect(TEXT)
-	if err != nil {
-		return err
-	}
-	if _, err := p.expect(CODE); err != nil {
-		return err
-	}
 	p.append(startCode)
-	p.append(text(s))
+	p.append(text(code))
 	p.append(endCode)
-	return nil
 }
 
 func (p *Parser) parseCodeBlock() error {
@@ -284,14 +267,8 @@ func (p *Parser) parseCodeBlock() error {
 	return nil
 }
 
-func (p *Parser) parseHTMLStart(start string) error {
-	var buf bytes.Buffer
-	buf.WriteRune('<')
-	for tok := p.next(); tok.Tok != HTML_END; tok = p.next() {
-		buf.WriteString(tok.Raw)
-	}
-	buf.WriteRune('>')
-	tt := html.NewTokenizer(&buf)
+func (p *Parser) parseHTMLTag(tag string) {
+	tt := html.NewTokenizer(strings.NewReader(tag))
 	tt.Next()
 	tok := tt.Token()
 	if !p.inlineMode && !blockTag[tok.DataAtom] {
@@ -299,7 +276,6 @@ func (p *Parser) parseHTMLStart(start string) error {
 		p.inlineMode = true
 	}
 	p.append(&tok)
-	return nil
 }
 
 func (p *Parser) parseHTMLEnd(tag string) {
@@ -316,59 +292,69 @@ func (p *Parser) parseHTMLEnd(tag string) {
 }
 
 func (p *Parser) parseOrderedList() {
+	p.block()
+	depth := 0
+	p.inlineMode = true
 	p.append(startOl)
 	p.append(startLi)
-	p.inlineMode = true
-	for {
-		tok := p.next()
-		switch tok.Tok {
-		case EOF:
-			break
-		case NEWLINE:
-			tok = p.next()
-			if tok.Tok == ORDERED_LIST {
+	for tok := p.next(); tok.Tok != EOF && tok.Tok != NEWLINE; tok = p.next() {
+		if tok.Tok == ORDERED_LIST {
+			d := len(tok.Lit)
+			if d > depth {
+				p.append(startOl)
+				p.append(startLi)
+			} else if d < depth {
+				p.append(endLi)
+				p.append(endOl)
 				p.append(endLi)
 				p.append(startLi)
-			} else if tok.Tok == EOF || tok.Tok == NEWLINE {
-				goto EmitEnd
 			} else {
-				p.consume(tok)
+				p.append(endLi)
+				p.append(startLi)
 			}
-		default:
+			depth = d
+		} else {
 			p.consume(tok)
 		}
 	}
-EmitEnd:
-	p.append(endLi)
-	p.append(endOl)
+	for ; depth >= 0; depth-- {
+		p.append(endLi)
+		p.append(endOl)
+	}
 	p.inlineMode = false
 }
 
 func (p *Parser) parseUnorderedList() {
+	p.block()
+	depth := 0
+	p.inlineMode = true
 	p.append(startUl)
 	p.append(startLi)
-	p.inlineMode = true
-	for {
-		tok := p.next()
-		switch tok.Tok {
-		case EOF:
-			break
-		case NEWLINE:
-			tok = p.next()
-			if tok.Tok == UNORDERED_LIST {
+	for tok := p.next(); tok.Tok != EOF && tok.Tok != NEWLINE; tok = p.next() {
+		if tok.Tok == UNORDERED_LIST {
+			d := len(tok.Lit)
+			if d > depth {
+				p.append(startUl)
+				p.append(startLi)
+			} else if d < depth {
+				for ; depth > d; depth-- {
+					p.append(endLi)
+					p.append(endUl)
+				}
 				p.append(endLi)
 				p.append(startLi)
-			} else if tok.Tok == EOF || tok.Tok == NEWLINE {
-				goto EmitEnd
 			} else {
-				p.consume(tok)
+				p.append(endLi)
+				p.append(startLi)
 			}
-		default:
+			depth = d
+		} else {
 			p.consume(tok)
 		}
 	}
-EmitEnd:
-	p.append(endLi)
-	p.append(endUl)
+	for ; depth >= 0; depth-- {
+		p.append(endLi)
+		p.append(endUl)
+	}
 	p.inlineMode = false
 }

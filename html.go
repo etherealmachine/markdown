@@ -105,3 +105,13 @@ var (
 		atom.Textarea: true,
 	}
 )
+
+func inline(token *html.Token) bool {
+	if token == nil {
+		return true
+	}
+	if token.Type == html.TextToken {
+		return true
+	}
+	return inlineTag[token.DataAtom]
+}

@@ -8,19 +8,19 @@ import (
 func PrettyPrint(tokens []*html.Token) string {
 	var pretty bytes.Buffer
 	depth := 0
-	prevTt := html.CommentToken
-	for _, token := range tokens {
-		tt := token.Type
+	var prev *html.Token
+	for i, token := range tokens {
 		tokenString := token.String()
-		if prevTt != html.TextToken && tt == html.TextToken && tokenString == "\n" {
+		if !inline(prev) && inline(token) && tokenString == "\n" {
 			continue
 		}
 
-		if tt == html.EndTagToken {
+		if token.Type == html.EndTagToken && blockTag[token.DataAtom] {
 			depth--
 		}
 
-		if prevTt != html.CommentToken && tt != html.TextToken && prevTt != html.TextToken {
+		if (!inline(token) && !inline(prev)) ||
+			(i > 0 && token.Type == html.StartTagToken && blockTag[token.DataAtom]) {
 			pretty.WriteByte('\n')
 			for i := 0; i < depth; i++ {
 				pretty.WriteByte('\t')
@@ -29,10 +29,10 @@ func PrettyPrint(tokens []*html.Token) string {
 
 		pretty.WriteString(tokenString)
 
-		if tt == html.StartTagToken {
+		if token.Type == html.StartTagToken && blockTag[token.DataAtom] {
 			depth++
 		}
-		prevTt = tt
+		prev = token
 	}
 	return pretty.String()
 }

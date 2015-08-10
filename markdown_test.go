@@ -25,15 +25,15 @@ var testCases = []testCase{
 	},
 	{
 		"[a link](www.example.com)",
-		"<p>\n\t<a href=\"www.example.com\">a link</a>\n</p>",
+		"<p><a href=\"www.example.com\">a link</a></p>",
 	},
 	{
 		"# [A link in a header](www.example.com)",
-		"<h1>\n\t<a href=\"www.example.com\">A link in a header</a>\n</h1>",
+		"<h1><a href=\"www.example.com\">A link in a header</a></h1>",
 	},
 	{
 		"![An img](www.example.com)",
-		"<p>\n\t<img alt=\"An img\" src=\"www.example.com\"/>\n</p>",
+		"<p><img alt=\"An img\" src=\"www.example.com\"/></p>",
 	},
 	{
 		"A paragraph of text\npossibly on multiple\nlines.",
@@ -41,15 +41,15 @@ var testCases = []testCase{
 	},
 	{
 		"<a href=\"www.example.com\" rel=\"nofollow\">Some HTML</a>",
-		"<p>\n\t<a href=\"www.example.com\" rel=\"nofollow\">Some HTML</a>\n</p>",
+		"<p><a href=\"www.example.com\" rel=\"nofollow\">Some HTML</a></p>",
 	},
 	{
 		"`some code`",
-		"<p>\n\t<code>some code</code>\n</p>",
+		"<p><code>some code</code></p>",
 	},
 	{
 		"```javascript\nA block of code\n```",
-		"<pre>\n\t<code class=\"javascript\">\nA block of code\n</code>\n</pre>",
+		"<pre><code class=\"javascript\">\nA block of code\n</code></pre>",
 	},
 }
 

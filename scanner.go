@@ -1,247 +1,117 @@
 package markdown
 
 import (
-	"bytes"
-	"io"
-	"strings"
+	"regexp"
 )
 
+type matcher func(s string) *Tok
+
 type Scanner struct {
-	src  io.RuneScanner
-	prev Token
-	buf  bytes.Buffer
+	pos        int
+	src        string
+	next       *Tok
+	matchers   []matcher
+	inOl, inUl bool
 }
 
 func NewScanner(src string) *Scanner {
-	return &Scanner{
-		src:  strings.NewReader(src),
-		prev: EOF,
+	s := &Scanner{
+		src: src,
 	}
+	s.matchers = []matcher{
+		matchHeader,
+		s.matchOrderedList,
+		s.matchUnorderedList,
+		groupMatcher(regexp.MustCompile("^\r?(\n)"), NEWLINE),
+		groupMatcher(regexp.MustCompile(`^\[(.*?)\]`), LINK_TEXT),
+		groupMatcher(regexp.MustCompile(`^!\[(.*?)\]`), IMG_ALT),
+		groupMatcher(regexp.MustCompile(`^\((.*?)\)`), HREF),
+		groupMatcher(regexp.MustCompile(`^\*\*(.+?)\*\*`), STRONG),
+		groupMatcher(regexp.MustCompile(`^\*(.+?)\*`), EM),
+		groupMatcher(regexp.MustCompile(`^__(.+?)__`), STRONG),
+		groupMatcher(regexp.MustCompile(`^_(.+?)_`), EM),
+		groupMatcher(regexp.MustCompile("^(```)"), CODE_BLOCK),
+		groupMatcher(regexp.MustCompile("^`(.*?)`"), CODE),
+		groupMatcher(regexp.MustCompile("^(<.*?>)"), HTML_TAG),
+	}
+	return s
 }
 
 func (s *Scanner) Next() *Tok {
-	tok := s.next()
-	s.prev = tok.Tok
-	return tok
-}
-
-var specialRunes = map[rune]bool{
-	'#':  true,
-	'*':  true,
-	'_':  true,
-	'!':  true,
-	'[':  true,
-	'`':  true,
-	'<':  true,
-	'>':  true,
-	'1':  true,
-	'2':  true,
-	'3':  true,
-	'4':  true,
-	'5':  true,
-	'6':  true,
-	'7':  true,
-	'8':  true,
-	'9':  true,
-	'\r': true,
-	'\n': true,
-}
-
-func (s *Scanner) next() *Tok {
+	if s.next != nil {
+		tok := s.next
+		s.next = nil
+		return tok
+	}
+	last := s.pos
 	for {
-		r, _, err := s.src.ReadRune()
-		if err == io.EOF {
-			if tok := s.drainText(); tok != nil {
+		if s.pos >= len(s.src) {
+			break
+		}
+		if s.pos+1 < len(s.src) && s.src[s.pos] == '\n' && s.src[s.pos+1] == '\n' {
+			s.inOl, s.inUl = false, false
+		}
+		for _, match := range s.matchers {
+			if tok := match(s.src[s.pos:]); tok != nil {
+				if last != s.pos {
+					text := &Tok{TEXT, s.src[last:s.pos], s.src[last:s.pos]}
+					s.pos += len(tok.Raw)
+					s.next = tok
+					return text
+				}
+				s.pos += len(tok.Raw)
 				return tok
 			}
-			return &Tok{EOF, "EOF", ""}
 		}
-		if specialRunes[r] {
-			if tok := s.drainText(); tok != nil {
-				return tok
-			}
+		s.pos++
+	}
+	if last != s.pos {
+		return &Tok{TEXT, s.src[last:], s.src[last:]}
+	}
+	return &Tok{EOF, "EOF", ""}
+}
+func groupMatcher(re *regexp.Regexp, tok Token) matcher {
+	return func(s string) *Tok {
+		groups := re.FindStringSubmatch(s)
+		if len(groups) == 0 {
+			return nil
 		}
-		switch r {
-		case '#':
-			return s.scanHeader()
-		case '*':
-			if next, _, _ := s.src.ReadRune(); next == '*' {
-				return &Tok{STRONG, "**", "**"}
-			} else if (s.prev == EOF || s.prev == NEWLINE) && next == ' ' {
-				return &Tok{UNORDERED_LIST, "* ", "* "}
-			}
-			s.src.UnreadRune()
-			return &Tok{EM, "*", "*"}
-		case '_':
-			if next, _, _ := s.src.ReadRune(); next == '_' {
-				return &Tok{STRONG, "__", "__"}
-			}
-			s.src.UnreadRune()
-			return &Tok{EM, "_", "_"}
-		case '!':
-			if next, _, _ := s.src.ReadRune(); next == '[' {
-				return s.scanImgAlt()
-			}
-			s.src.UnreadRune()
-			s.buf.WriteRune(r)
-		case '[':
-			return s.scanLinkText()
-		case '(':
-			if s.prev == LINK_TEXT || s.prev == IMG_ALT {
-				return s.scanHref()
-			}
-			s.buf.WriteRune(r)
-		case '`':
-			if next, _, _ := s.src.ReadRune(); next == '`' {
-				if next, _, _ = s.src.ReadRune(); next == '`' {
-					return &Tok{CODE_BLOCK, "```", "```"}
-				}
-				s.src.UnreadRune()
-			}
-			s.src.UnreadRune()
-			return &Tok{CODE, "`", "`"}
-		case '<':
-			if next, _, _ := s.src.ReadRune(); next == '/' {
-				return s.scanHtmlEndTag()
-			}
-			s.src.UnreadRune()
-			return &Tok{HTML_START, "<", "<"}
-		case '>':
-			return &Tok{HTML_END, ">", ">"}
-		case '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			if s.prev == EOF || s.prev == NEWLINE {
-				if next, _, _ := s.src.ReadRune(); next == '.' {
-					if next, _, _ = s.src.ReadRune(); next == ' ' {
-						numeral := string([]rune{r, '.', ' '})
-						return &Tok{ORDERED_LIST, numeral, numeral}
-					}
-					s.src.UnreadRune()
-				}
-				s.src.UnreadRune()
-			}
-			s.buf.WriteRune(r)
-		case '\r':
-		case '\n':
-			return &Tok{NEWLINE, "\n", "\n"}
-		default:
-			s.buf.WriteRune(r)
-		}
+		return &Tok{tok, groups[1], groups[0]}
+	}
+}
+
+var headerRe = regexp.MustCompile(`^([#]+)\s*`)
+
+func matchHeader(s string) *Tok {
+	groups := headerRe.FindStringSubmatch(s)
+	if len(groups) == 0 {
+		return nil
+	}
+	return &Tok{headers[len(groups[1])], groups[1], groups[0]}
+}
+
+var orderedListMatcher = groupMatcher(regexp.MustCompile(`^\n*([\t ]*)\d+\. `), ORDERED_LIST)
+
+func (s *Scanner) matchOrderedList(str string) *Tok {
+	if !(s.pos == 0 || s.inOl || (len(str) >= 2 && str[0] == '\n' && str[1] == '\n')) {
+		return nil
+	}
+	if tok := orderedListMatcher(str); tok != nil {
+		s.inOl = true
+		return tok
 	}
 	return nil
 }
 
-func (s *Scanner) drainText() *Tok {
-	if s.buf.Len() != 0 {
-		s.src.UnreadRune()
-		text := s.buf.String()
-		s.buf.Reset()
-		return &Tok{TEXT, text, text}
+var unorderedListMatcher = groupMatcher(regexp.MustCompile(`^\n*([\t ]*)[*-] `), UNORDERED_LIST)
+
+func (s *Scanner) matchUnorderedList(str string) *Tok {
+	if !(s.pos == 0 || s.inUl || (len(str) >= 2 && str[0] == '\n' && str[1] == '\n')) {
+		return nil
+	}
+	if tok := unorderedListMatcher(str); tok != nil {
+		s.inUl = true
+		return tok
 	}
 	return nil
-}
-
-func (s *Scanner) peek() rune {
-	next, _, err := s.src.ReadRune()
-	s.src.UnreadRune()
-	if err != nil {
-		return ' '
-	}
-	return next
-}
-
-func (s *Scanner) scanHeader() *Tok {
-	lit := bytes.NewBufferString("#")
-	count := 1
-	for {
-		r, _, err := s.src.ReadRune()
-		if err != nil {
-			return &Tok{EOF, "EOF", ""}
-		}
-		if r == '#' {
-			lit.WriteByte('#')
-			count++
-		} else {
-			s.src.UnreadRune()
-			break
-		}
-	}
-	header := lit.String()
-	raw := header
-	for s.peek() == ' ' {
-		raw += " "
-		s.src.ReadRune()
-	}
-	return &Tok{headers[count], header, raw}
-}
-
-func (s *Scanner) scanLinkText() *Tok {
-	var lit bytes.Buffer
-	for {
-		r, _, err := s.src.ReadRune()
-		if err != nil {
-			return &Tok{EOF, "EOF", ""}
-		}
-		if r != ']' {
-			lit.WriteRune(r)
-		} else {
-			break
-		}
-	}
-	text := lit.String()
-	raw := "[" + text + "]"
-	return &Tok{LINK_TEXT, text, raw}
-}
-
-func (s *Scanner) scanImgAlt() *Tok {
-	var lit bytes.Buffer
-	for {
-		r, _, err := s.src.ReadRune()
-		if err != nil {
-			return &Tok{EOF, "EOF", ""}
-		}
-		if r != ']' {
-			lit.WriteRune(r)
-		} else {
-			break
-		}
-	}
-	alt := lit.String()
-	raw := "![" + alt + "]"
-	return &Tok{IMG_ALT, alt, raw}
-}
-
-func (s *Scanner) scanHref() *Tok {
-	var lit bytes.Buffer
-	for {
-		r, _, err := s.src.ReadRune()
-		if err != nil {
-			return &Tok{EOF, "EOF", ""}
-		}
-		if r != ')' {
-			lit.WriteRune(r)
-		} else {
-			break
-		}
-	}
-	href := lit.String()
-	raw := "(" + href + ")"
-	return &Tok{HREF, href, raw}
-}
-
-func (s *Scanner) scanHtmlEndTag() *Tok {
-	var lit bytes.Buffer
-	for {
-		r, _, err := s.src.ReadRune()
-		if err != nil {
-			return &Tok{EOF, "EOF", ""}
-		}
-		if r != '>' {
-			lit.WriteRune(r)
-		} else {
-			break
-		}
-	}
-	inner := lit.String()
-	raw := "<" + inner + ">"
-	return &Tok{HTML_END_TAG, inner, raw}
 }

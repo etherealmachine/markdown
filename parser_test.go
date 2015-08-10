@@ -88,7 +88,7 @@ var parserCases = []*parserCase{
 	},
 	{
 		[]Tok{
-			{CODE, "`", "`"}, {TEXT, "Some code", "Some code"}, {CODE, "`", "`"},
+			{CODE, "Some code", "`Some code`"},
 		},
 		[]*html.Token{
 			startP, startCode, text("Some code"), endCode, endP,
@@ -112,7 +112,7 @@ var parserCases = []*parserCase{
 	},
 	{
 		[]Tok{
-			{TEXT, "foo", "foo"}, {NEWLINE, "\n", "\n"}, {TEXT, "bar", "bar"}, {NEWLINE, "\n", "\n"}, {NEWLINE, "\n", "\n"}, {TEXT, "baz", "bar"}, {CODE, "`", "`"}, {TEXT, "bang", "bang"}, {CODE, "`", "`"},
+			{TEXT, "foo", "foo"}, {NEWLINE, "\n", "\n"}, {TEXT, "bar", "bar"}, {NEWLINE, "\n", "\n"}, {NEWLINE, "\n", "\n"}, {TEXT, "baz", "bar"}, {CODE, "bang", "`bang`"},
 		},
 		[]*html.Token{
 			startP, text("foo"), text("\n"), text("bar"), endP,
@@ -121,7 +121,7 @@ var parserCases = []*parserCase{
 	},
 	{
 		[]Tok{
-			{STRONG, "**", "**"}, {TEXT, "foo", "foo"}, {STRONG, "**", "**"},
+			{STRONG, "foo", "**foo**"},
 		},
 		[]*html.Token{
 			startP, startStrong, text("foo"), endStrong, endP,
@@ -129,7 +129,7 @@ var parserCases = []*parserCase{
 	},
 	{
 		[]Tok{
-			{EM, "*", "*"}, {TEXT, "foo", "foo"}, {EM, "*", "*"},
+			{EM, "foo", "*foo*"},
 		},
 		[]*html.Token{
 			startP, startEm, text("foo"), endEm, endP,
@@ -137,11 +137,13 @@ var parserCases = []*parserCase{
 	},
 	{
 		[]Tok{
-			{UNORDERED_LIST, "* ", "* "}, {TEXT, "foo", "foo"}, {NEWLINE, "\n", "\n"},
-			{UNORDERED_LIST, "* ", "* "}, {TEXT, "bar", "bar"}, {NEWLINE, "\n", "\n"},
-			{UNORDERED_LIST, "* ", "* "}, {TEXT, "baz", "baz"}, {NEWLINE, "\n", "\n"},
+			{H2, "##", "## "}, {TEXT, "header", "header"},
+			{UNORDERED_LIST, "", "* "}, {TEXT, "foo", "foo"},
+			{UNORDERED_LIST, "", "* "}, {TEXT, "bar", "bar"},
+			{UNORDERED_LIST, "", "* "}, {TEXT, "baz", "baz"}, {NEWLINE, "\n", "\n"},
 		},
 		[]*html.Token{
+			startH2, text("header"), endH2,
 			startUl,
 			startLi, text("foo"), endLi,
 			startLi, text("bar"), endLi,
@@ -151,9 +153,9 @@ var parserCases = []*parserCase{
 	},
 	{
 		[]Tok{
-			{ORDERED_LIST, "1. ", "1. "}, {TEXT, "foo", "foo"}, {NEWLINE, "\n", "\n"},
-			{ORDERED_LIST, "2. ", "2. "}, {TEXT, "bar", "bar"}, {NEWLINE, "\n", "\n"},
-			{ORDERED_LIST, "3. ", "2. "}, {TEXT, "baz", "baz"}, {NEWLINE, "\n", "\n"},
+			{ORDERED_LIST, "", "1. "}, {TEXT, "foo", "foo"},
+			{ORDERED_LIST, "", "2. "}, {TEXT, "bar", "bar"},
+			{ORDERED_LIST, "", "2. "}, {TEXT, "baz", "baz"}, {NEWLINE, "\n", "\n"},
 		},
 		[]*html.Token{
 			startOl,
