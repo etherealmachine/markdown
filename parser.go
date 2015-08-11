@@ -398,17 +398,28 @@ func (p *Parser) parseTD() error {
 		p.append(startTable)
 	}
 	p.append(startTr)
-	row := 0
+	row, col := 0, 0
 	nlCount := 0
+	var styles []*html.Token
 	for tok := p.input[p.pos-1]; tok.Type != EOF; tok = p.next() {
 		if tok.Type != TD && tok.Type != EOF && tok.Type != NEWLINE {
 			return ErrUnexpectedToken{tok}
 		}
-		if tok.Type == TD && row != 1 {
+		if tok.Type == TD && row == 1 {
+			if strings.HasPrefix(tok.Lit, ":") && strings.HasSuffix(tok.Lit, ":") {
+				styles = append(styles, startTdC)
+			} else if strings.HasPrefix(tok.Lit, ":") {
+				styles = append(styles, startTdL)
+			} else if strings.HasSuffix(tok.Lit, ":") {
+				styles = append(styles, startTdR)
+			} else {
+				styles = append(styles, startTd)
+			}
+		} else if tok.Type == TD {
 			if row == 0 {
 				p.append(startTh)
 			} else {
-				p.append(startTd)
+				p.append(styles[col])
 			}
 			scanner := NewScanner(tok.Lit)
 			for tok := scanner.Next(); tok.Type != EOF; tok = scanner.Next() {
@@ -421,6 +432,7 @@ func (p *Parser) parseTD() error {
 			} else {
 				p.append(endTd)
 			}
+			col++
 		}
 		if tok.Type == NEWLINE {
 			if row != 1 && nlCount == 0 && p.peek().Type != NEWLINE {
@@ -429,6 +441,7 @@ func (p *Parser) parseTD() error {
 			}
 			nlCount++
 			row++
+			col = 0
 		} else {
 			nlCount = 0
 		}

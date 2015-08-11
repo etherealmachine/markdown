@@ -59,6 +59,12 @@ var (
 	endTh       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Th, Data: "th"}
 	startTd     = &html.Token{Type: html.StartTagToken, DataAtom: atom.Td, Data: "td"}
 	endTd       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Td, Data: "td"}
+	startTdL    = &html.Token{Type: html.StartTagToken, DataAtom: atom.Td, Data: "td",
+		Attr: []html.Attribute{{Key: "style", Val: "text-align: left;"}}}
+	startTdC = &html.Token{Type: html.StartTagToken, DataAtom: atom.Td, Data: "td",
+		Attr: []html.Attribute{{Key: "style", Val: "text-align: center;"}}}
+	startTdR = &html.Token{Type: html.StartTagToken, DataAtom: atom.Td, Data: "td",
+		Attr: []html.Attribute{{Key: "style", Val: "text-align: right;"}}}
 )
 
 func text(s string) *html.Token {
