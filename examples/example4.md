@@ -14,5 +14,7 @@ var R*earth = 6378.14 * 1000; // meters
 var altitude*satellite = 200 * 1000; // meters
 var R*satellite = R*earth + altitude*satellite; v(R*satellite) / 1000 + " km/s";
 ```
+
+where $foo = bar$
   </div>
 </div> 

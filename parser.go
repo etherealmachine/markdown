@@ -215,13 +215,13 @@ func (p *Parser) parseNewline() {
 }
 
 func (p *Parser) parseText(s string) {
-	if strings.TrimSpace(s) == "" {
+	if strings.TrimLeft(s, " ") == "" {
 		return
 	}
 	if !p.inlineMode {
 		p.append(startP)
 		p.inlineMode = true
-		s = strings.TrimSpace(s)
+		s = strings.TrimLeft(s, " ")
 	}
 	p.append(text(s))
 }
