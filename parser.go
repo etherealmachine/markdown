@@ -276,19 +276,14 @@ func (p *Parser) parseHTMLTag(tag string) {
 	if !p.inlineMode && !blockTag[tok.DataAtom] {
 		p.append(startP)
 		p.inlineMode = true
-	}
-	p.append(&tok)
-}
-
-func (p *Parser) parseHTMLEnd(tag string) {
-	tok := html.Token{
-		Type:     html.EndTagToken,
-		DataAtom: atom.Lookup([]byte(tag)),
-		Data:     tag,
-	}
-	if p.inlineMode && !(tok.Type == html.EndTagToken && inlineTag[tok.DataAtom]) {
+	} else if p.inlineMode && blockTag[tok.DataAtom] {
 		p.append(endP)
 		p.inlineMode = false
+	}
+	if blockTag[tok.DataAtom] {
+		p.inlineMode = false
+	} else {
+		p.inlineMode = true
 	}
 	p.append(&tok)
 }
