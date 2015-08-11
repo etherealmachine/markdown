@@ -18,7 +18,7 @@ var (
 	endH5     = &html.Token{Type: html.EndTagToken, DataAtom: atom.H5, Data: "h5"}
 	startH6   = &html.Token{Type: html.StartTagToken, DataAtom: atom.H6, Data: "h6"}
 	endH6     = &html.Token{Type: html.EndTagToken, DataAtom: atom.H6, Data: "h6"}
-	hStartTag = map[Token]*html.Token{
+	hStartTag = map[TokenType]*html.Token{
 		H1: startH1,
 		H2: startH2,
 		H3: startH3,
@@ -26,7 +26,7 @@ var (
 		H5: startH5,
 		H6: startH6,
 	}
-	hEndTag = map[Token]*html.Token{
+	hEndTag = map[TokenType]*html.Token{
 		H1: endH1,
 		H2: endH2,
 		H3: endH3,

@@ -9,25 +9,25 @@ import (
 
 type fakeScanner struct {
 	pos  int
-	toks []Tok
+	toks []Token
 }
 
-func (s *fakeScanner) Next() *Tok {
+func (s *fakeScanner) Next() *Token {
 	if s.pos >= len(s.toks) {
-		return &Tok{EOF, "EOF", ""}
+		return &Token{EOF, "EOF", ""}
 	}
 	s.pos++
 	return &s.toks[s.pos-1]
 }
 
 type parserCase struct {
-	input []Tok
+	input []Token
 	want  []*html.Token
 }
 
 var parserCases = []*parserCase{
 	{
-		[]Tok{
+		[]Token{
 			{H1, "# ", "# "}, {TEXT, "Some header", "Some header"}, {NEWLINE, "\n", "\n"},
 		},
 		[]*html.Token{
@@ -35,7 +35,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{H2, "## ", "## "}, {TEXT, "Some header", "Some header"}, {NEWLINE, "\n", "\n"},
 		},
 		[]*html.Token{
@@ -43,7 +43,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{LINK_TEXT, "A link", "[A link]"}, {HREF, "www.example.com", "(www.example.com)"},
 		},
 		[]*html.Token{
@@ -63,7 +63,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{IMG_ALT, "An image", "![An image]"}, {HREF, "www.example.com", "(www.example.com)"},
 		},
 		[]*html.Token{
@@ -87,7 +87,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{CODE, "Some code", "`Some code`"},
 		},
 		[]*html.Token{
@@ -95,7 +95,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{CODE_BLOCK, "```", "```"}, {NEWLINE, "\n", "\n"}, {TEXT, "Some code ", "Some code "}, {EM, "*", "*"}, {CODE_BLOCK, "```", "```"},
 		},
 		[]*html.Token{
@@ -103,7 +103,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{TEXT, "foo", "foo"}, {NEWLINE, "\n", "\n"}, {TEXT, "bar", "bar"},
 		},
 		[]*html.Token{
@@ -111,7 +111,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{TEXT, "foo", "foo"}, {NEWLINE, "\n", "\n"}, {TEXT, "bar", "bar"}, {NEWLINE, "\n", "\n"}, {NEWLINE, "\n", "\n"}, {TEXT, "baz", "bar"}, {CODE, "bang", "`bang`"},
 		},
 		[]*html.Token{
@@ -120,7 +120,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{STRONG, "foo", "**foo**"},
 		},
 		[]*html.Token{
@@ -128,7 +128,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{EM, "foo", "*foo*"},
 		},
 		[]*html.Token{
@@ -136,7 +136,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{H2, "##", "## "}, {TEXT, "header", "header"},
 			{UNORDERED_LIST, "", "* "}, {TEXT, "foo", "foo"},
 			{UNORDERED_LIST, "", "* "}, {TEXT, "bar", "bar"},
@@ -152,7 +152,7 @@ var parserCases = []*parserCase{
 		},
 	},
 	{
-		[]Tok{
+		[]Token{
 			{ORDERED_LIST, "", "1. "}, {TEXT, "foo", "foo"},
 			{ORDERED_LIST, "", "2. "}, {TEXT, "bar", "bar"},
 			{ORDERED_LIST, "", "2. "}, {TEXT, "baz", "baz"}, {NEWLINE, "\n", "\n"},

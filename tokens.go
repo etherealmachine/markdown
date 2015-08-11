@@ -4,20 +4,20 @@ import (
 	"fmt"
 )
 
-type Token int
+type TokenType int
 
-type Tok struct {
-	Tok Token
-	Lit string
-	Raw string
+type Token struct {
+	Token TokenType
+	Lit   string
+	Raw   string
 }
 
-func (t *Tok) Tuple() (Token, string, string) {
-	return t.Tok, t.Lit, t.Raw
+func (t *Token) Tuple() (TokenType, string, string) {
+	return t.Token, t.Lit, t.Raw
 }
 
-func (t *Tok) String() string {
-	return fmt.Sprintf("&{%s %q %q}", t.Tok, t.Lit, t.Raw)
+func (t *Token) String() string {
+	return fmt.Sprintf("&{%s %q %q}", t.Token, t.Lit, t.Raw)
 }
 
 const (
@@ -43,7 +43,7 @@ const (
 	MATHML
 )
 
-var tokenNames = map[Token]string{
+var tokenNames = map[TokenType]string{
 	EOF:            "EOF",
 	H1:             "H1",
 	H2:             "H2",
@@ -66,11 +66,11 @@ var tokenNames = map[Token]string{
 	MATHML:         "MATHML",
 }
 
-func (t Token) String() string {
+func (t TokenType) String() string {
 	return tokenNames[t]
 }
 
-var headers = map[int]Token{
+var headers = map[int]TokenType{
 	1: H1,
 	2: H2,
 	3: H3,
@@ -79,7 +79,7 @@ var headers = map[int]Token{
 	6: H6,
 }
 
-var blockToken = map[Token]bool{
+var blockToken = map[TokenType]bool{
 	EOF:            true,
 	H1:             true,
 	H2:             true,

@@ -9,11 +9,11 @@ import (
 )
 
 type scanner interface {
-	Next() *Tok
+	Next() *Token
 }
 
 type ErrUnexpectedToken struct {
-	tok *Tok
+	tok *Token
 }
 
 func (e ErrUnexpectedToken) Error() string {
@@ -22,7 +22,7 @@ func (e ErrUnexpectedToken) Error() string {
 
 type Parser struct {
 	pos        int
-	input      []*Tok
+	input      []*Token
 	tokens     []*html.Token
 	inlineMode bool
 	saved      savePoint
@@ -40,10 +40,10 @@ func Parse(input string) []*html.Token {
 }
 
 func (p *Parser) parse(scanner scanner) {
-	for tok := scanner.Next(); tok.Tok != EOF; tok = scanner.Next() {
+	for tok := scanner.Next(); tok.Token != EOF; tok = scanner.Next() {
 		p.input = append(p.input, tok)
 	}
-	for tok := p.next(); tok.Tok != EOF; tok = p.next() {
+	for tok := p.next(); tok.Token != EOF; tok = p.next() {
 		p.consume(tok)
 	}
 	if p.inlineMode {
@@ -52,12 +52,12 @@ func (p *Parser) parse(scanner scanner) {
 	}
 }
 
-func (p *Parser) consume(tok *Tok) {
+func (p *Parser) consume(tok *Token) {
 	p.save()
 	var err error
-	switch tok.Tok {
+	switch tok.Token {
 	case H1, H2, H3, H4, H5, H6:
-		p.parseHeader(tok.Tok)
+		p.parseHeader(tok.Token)
 	case EM:
 		p.parseEm(tok.Lit)
 	case STRONG:
@@ -88,9 +88,9 @@ func (p *Parser) consume(tok *Tok) {
 	}
 }
 
-func (p *Parser) expect(tok Token) (string, error) {
+func (p *Parser) expect(tok TokenType) (string, error) {
 	t := p.next()
-	if t.Tok != tok {
+	if t.Token != tok {
 		return "", ErrUnexpectedToken{t}
 	}
 	return t.Lit, nil
@@ -112,17 +112,17 @@ func (p *Parser) revert() {
 	p.parseText(buf.String())
 }
 
-func (p *Parser) next() *Tok {
+func (p *Parser) next() *Token {
 	if p.pos >= len(p.input) {
-		return &Tok{EOF, "EOF", ""}
+		return &Token{EOF, "EOF", ""}
 	}
 	p.pos++
 	return p.input[p.pos-1]
 }
 
-func (p *Parser) peek() *Tok {
+func (p *Parser) peek() *Token {
 	if p.pos >= len(p.input) {
-		return &Tok{EOF, "EOF", ""}
+		return &Token{EOF, "EOF", ""}
 	}
 	return p.input[p.pos]
 }
@@ -145,16 +145,16 @@ func (p *Parser) block() {
 	}
 }
 
-func (p *Parser) parseHeader(headerToken Token) {
+func (p *Parser) parseHeader(headerToken TokenType) {
 	p.append(hStartTag[headerToken])
 	p.inlineMode = true
 	for {
 		next := p.peek()
-		if next.Tok == EOF || next.Tok == NEWLINE {
+		if next.Token == EOF || next.Token == NEWLINE {
 			p.next()
 			break
 		}
-		if next.Tok == ORDERED_LIST || next.Tok == UNORDERED_LIST {
+		if next.Token == ORDERED_LIST || next.Token == UNORDERED_LIST {
 			break
 		}
 		p.next()
@@ -180,7 +180,7 @@ func (p *Parser) parseStrong(lit string) {
 
 func (p *Parser) parseNewline() {
 	tok := p.next()
-	if tok.Tok == NEWLINE {
+	if tok.Token == NEWLINE {
 		p.block()
 	} else {
 		p.tokens = append(p.tokens, text("\n"))
@@ -242,7 +242,7 @@ func (p *Parser) parseCodeBlock() error {
 	p.append(startPre)
 	var buf bytes.Buffer
 	tok := p.next()
-	if tok.Tok == TEXT {
+	if tok.Token == TEXT {
 		p.tokens = append(p.tokens, &html.Token{
 			Type:     html.StartTagToken,
 			DataAtom: atom.Code,
@@ -251,13 +251,13 @@ func (p *Parser) parseCodeBlock() error {
 				{Key: "class", Val: tok.Lit},
 			},
 		})
-	} else if tok.Tok == NEWLINE {
+	} else if tok.Token == NEWLINE {
 		p.append(startCode)
 	} else {
 		return ErrUnexpectedToken{tok}
 	}
-	for tok = p.next(); tok.Tok != CODE_BLOCK; tok = p.next() {
-		if tok.Tok == EOF {
+	for tok = p.next(); tok.Token != CODE_BLOCK; tok = p.next() {
+		if tok.Token == EOF {
 			return ErrUnexpectedToken{tok}
 		}
 		buf.WriteString(tok.Raw)
@@ -294,8 +294,8 @@ func (p *Parser) parseOrderedList() {
 	p.inlineMode = true
 	p.append(startOl)
 	p.append(startLi)
-	for tok := p.next(); tok.Tok != EOF && tok.Tok != NEWLINE; tok = p.next() {
-		if tok.Tok == ORDERED_LIST {
+	for tok := p.next(); tok.Token != EOF && tok.Token != NEWLINE; tok = p.next() {
+		if tok.Token == ORDERED_LIST {
 			d := len(tok.Lit)
 			if d > depth {
 				p.append(startOl)
@@ -327,8 +327,8 @@ func (p *Parser) parseUnorderedList() {
 	p.inlineMode = true
 	p.append(startUl)
 	p.append(startLi)
-	for tok := p.next(); tok.Tok != EOF && tok.Tok != NEWLINE; tok = p.next() {
-		if tok.Tok == UNORDERED_LIST {
+	for tok := p.next(); tok.Token != EOF && tok.Token != NEWLINE; tok = p.next() {
+		if tok.Token == UNORDERED_LIST {
 			d := len(tok.Lit)
 			if d > depth {
 				p.append(startUl)
