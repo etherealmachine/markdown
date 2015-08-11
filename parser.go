@@ -40,10 +40,10 @@ func Parse(input string) []*html.Token {
 }
 
 func (p *Parser) parse(scanner scanner) {
-	for tok := scanner.Next(); tok.Token != EOF; tok = scanner.Next() {
+	for tok := scanner.Next(); tok.Type != EOF; tok = scanner.Next() {
 		p.input = append(p.input, tok)
 	}
-	for tok := p.next(); tok.Token != EOF; tok = p.next() {
+	for tok := p.next(); tok.Type != EOF; tok = p.next() {
 		p.consume(tok)
 	}
 	if p.inlineMode {
@@ -53,11 +53,32 @@ func (p *Parser) parse(scanner scanner) {
 }
 
 func (p *Parser) consume(tok *Token) {
+	if tok := p.peek(); tok.Type == TD {
+
+	}
 	p.save()
 	var err error
-	switch tok.Token {
+	switch tok.Type {
 	case H1, H2, H3, H4, H5, H6:
-		p.parseHeader(tok.Token)
+		p.parseHeader(tok.Type)
+	case CODE_BLOCK:
+		err = p.parseCodeBlock()
+	case ORDERED_LIST:
+		p.parseOrderedList()
+	case UNORDERED_LIST:
+		p.parseUnorderedList()
+	default:
+		p.consumeInline(tok)
+	}
+	if err != nil {
+		p.revert()
+	}
+}
+
+func (p *Parser) consumeInline(tok *Token) {
+	p.save()
+	var err error
+	switch tok.Type {
 	case EM:
 		p.parseEm(tok.Lit)
 	case STRONG:
@@ -72,14 +93,8 @@ func (p *Parser) consume(tok *Token) {
 		err = p.parseImg(tok.Lit)
 	case CODE:
 		p.parseCode(tok.Lit)
-	case CODE_BLOCK:
-		err = p.parseCodeBlock()
 	case HTML_TAG:
 		p.parseHTMLTag(tok.Lit)
-	case ORDERED_LIST:
-		p.parseOrderedList()
-	case UNORDERED_LIST:
-		p.parseUnorderedList()
 	default:
 		p.parseText(tok.Raw)
 	}
@@ -90,7 +105,7 @@ func (p *Parser) consume(tok *Token) {
 
 func (p *Parser) expect(tok TokenType) (string, error) {
 	t := p.next()
-	if t.Token != tok {
+	if t.Type != tok {
 		return "", ErrUnexpectedToken{t}
 	}
 	return t.Lit, nil
@@ -150,15 +165,15 @@ func (p *Parser) parseHeader(headerToken TokenType) {
 	p.inlineMode = true
 	for {
 		next := p.peek()
-		if next.Token == EOF || next.Token == NEWLINE {
+		if next.Type == EOF || next.Type == NEWLINE {
 			p.next()
 			break
 		}
-		if next.Token == ORDERED_LIST || next.Token == UNORDERED_LIST {
+		if next.Type == ORDERED_LIST || next.Type == UNORDERED_LIST {
 			break
 		}
 		p.next()
-		p.consume(next)
+		p.consumeInline(next)
 	}
 	p.append(hEndTag[headerToken])
 	p.inlineMode = false
@@ -180,7 +195,7 @@ func (p *Parser) parseStrong(lit string) {
 
 func (p *Parser) parseNewline() {
 	tok := p.next()
-	if tok.Token == NEWLINE {
+	if tok.Type == NEWLINE {
 		p.block()
 	} else {
 		p.tokens = append(p.tokens, text("\n"))
@@ -242,7 +257,7 @@ func (p *Parser) parseCodeBlock() error {
 	p.append(startPre)
 	var buf bytes.Buffer
 	tok := p.next()
-	if tok.Token == TEXT {
+	if tok.Type == TEXT {
 		p.tokens = append(p.tokens, &html.Token{
 			Type:     html.StartTagToken,
 			DataAtom: atom.Code,
@@ -251,13 +266,13 @@ func (p *Parser) parseCodeBlock() error {
 				{Key: "class", Val: tok.Lit},
 			},
 		})
-	} else if tok.Token == NEWLINE {
+	} else if tok.Type == NEWLINE {
 		p.append(startCode)
 	} else {
 		return ErrUnexpectedToken{tok}
 	}
-	for tok = p.next(); tok.Token != CODE_BLOCK; tok = p.next() {
-		if tok.Token == EOF {
+	for tok = p.next(); tok.Type != CODE_BLOCK; tok = p.next() {
+		if tok.Type == EOF {
 			return ErrUnexpectedToken{tok}
 		}
 		buf.WriteString(tok.Raw)
@@ -294,8 +309,8 @@ func (p *Parser) parseOrderedList() {
 	p.inlineMode = true
 	p.append(startOl)
 	p.append(startLi)
-	for tok := p.next(); tok.Token != EOF && tok.Token != NEWLINE; tok = p.next() {
-		if tok.Token == ORDERED_LIST {
+	for tok := p.next(); tok.Type != EOF && tok.Type != NEWLINE; tok = p.next() {
+		if tok.Type == ORDERED_LIST {
 			d := len(tok.Lit)
 			if d > depth {
 				p.append(startOl)
@@ -311,7 +326,7 @@ func (p *Parser) parseOrderedList() {
 			}
 			depth = d
 		} else {
-			p.consume(tok)
+			p.consumeInline(tok)
 		}
 	}
 	for ; depth >= 0; depth-- {
@@ -327,8 +342,8 @@ func (p *Parser) parseUnorderedList() {
 	p.inlineMode = true
 	p.append(startUl)
 	p.append(startLi)
-	for tok := p.next(); tok.Token != EOF && tok.Token != NEWLINE; tok = p.next() {
-		if tok.Token == UNORDERED_LIST {
+	for tok := p.next(); tok.Type != EOF && tok.Type != NEWLINE; tok = p.next() {
+		if tok.Type == UNORDERED_LIST {
 			d := len(tok.Lit)
 			if d > depth {
 				p.append(startUl)
@@ -346,7 +361,7 @@ func (p *Parser) parseUnorderedList() {
 			}
 			depth = d
 		} else {
-			p.consume(tok)
+			p.consumeInline(tok)
 		}
 	}
 	for ; depth >= 0; depth-- {

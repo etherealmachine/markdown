@@ -51,6 +51,14 @@ var (
 	endEm       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Em, Data: "em"}
 	startStrong = &html.Token{Type: html.StartTagToken, DataAtom: atom.Strong, Data: "strong"}
 	endStrong   = &html.Token{Type: html.EndTagToken, DataAtom: atom.Strong, Data: "strong"}
+	startTable  = &html.Token{Type: html.StartTagToken, DataAtom: atom.Table, Data: "table"}
+	endTable    = &html.Token{Type: html.EndTagToken, DataAtom: atom.Table, Data: "table"}
+	startTr     = &html.Token{Type: html.StartTagToken, DataAtom: atom.Tr, Data: "tr"}
+	endTr       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Tr, Data: "tr"}
+	startTh     = &html.Token{Type: html.StartTagToken, DataAtom: atom.Th, Data: "th"}
+	endTh       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Th, Data: "th"}
+	startTd     = &html.Token{Type: html.StartTagToken, DataAtom: atom.Td, Data: "td"}
+	endTd       = &html.Token{Type: html.EndTagToken, DataAtom: atom.Td, Data: "td"}
 )
 
 func text(s string) *html.Token {

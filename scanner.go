@@ -34,6 +34,7 @@ func NewScanner(src string) *Scanner {
 		groupMatcher(regexp.MustCompile("^`(.*?)`"), CODE),
 		groupMatcher(regexp.MustCompile("(?s)^(<.*?>)"), HTML_TAG),
 		groupMatcher(regexp.MustCompile("^([$].*?[$])"), MATHML),
+		groupMatcher(regexp.MustCompile(`^(\s*[|]\s*)`), TD),
 	}
 	return s
 }

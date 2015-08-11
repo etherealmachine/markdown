@@ -62,13 +62,19 @@ var scannerCases = []*scannerCase{
 		ORDERED_LIST, TEXT,
 		ORDERED_LIST, TEXT, NEWLINE,
 	}},
+	{"Col1 | Col2 | Col3\n-|-|-\nA | B | C\nD | *E* | F\n", []TokenType{
+		TEXT, TD, TEXT, TD, TEXT, NEWLINE,
+		TEXT, TD, TEXT, TD, TEXT, NEWLINE,
+		TEXT, TD, TEXT, TD, TEXT, NEWLINE,
+		TEXT, TD, EM, TD, TEXT, NEWLINE,
+	}},
 }
 
 func TestScanner(t *testing.T) {
 	for _, c := range scannerCases {
 		scanner := NewScanner(c.input)
 		var got []TokenType
-		for tok, _, _ := scanner.Next().Tuple(); tok != EOF; tok, _, _ = scanner.Next().Tuple() {
+		for tok := scanner.Next().Type; tok != EOF; tok = scanner.Next().Type {
 			got = append(got, tok)
 		}
 		if !reflect.DeepEqual(got, c.want) {

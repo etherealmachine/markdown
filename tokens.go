@@ -7,17 +7,13 @@ import (
 type TokenType int
 
 type Token struct {
-	Token TokenType
-	Lit   string
-	Raw   string
-}
-
-func (t *Token) Tuple() (TokenType, string, string) {
-	return t.Token, t.Lit, t.Raw
+	Type TokenType
+	Lit  string
+	Raw  string
 }
 
 func (t *Token) String() string {
-	return fmt.Sprintf("&{%s %q %q}", t.Token, t.Lit, t.Raw)
+	return fmt.Sprintf("&{%s %q %q}", t.Type, t.Lit, t.Raw)
 }
 
 const (
@@ -41,6 +37,7 @@ const (
 	ORDERED_LIST
 	UNORDERED_LIST
 	MATHML
+	TD
 )
 
 var tokenNames = map[TokenType]string{
@@ -64,6 +61,7 @@ var tokenNames = map[TokenType]string{
 	ORDERED_LIST:   "ORDERED_LIST",
 	UNORDERED_LIST: "UNORDERED_LIST",
 	MATHML:         "MATHML",
+	TD:             "TD",
 }
 
 func (t TokenType) String() string {
