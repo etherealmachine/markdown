@@ -215,6 +215,9 @@ func (p *Parser) parseNewline() {
 }
 
 func (p *Parser) parseText(s string) {
+	if strings.TrimSpace(s) == "" {
+		return
+	}
 	if !p.inlineMode {
 		p.append(startP)
 		p.inlineMode = true
