@@ -62,11 +62,11 @@ var scannerCases = []*scannerCase{
 		ORDERED_LIST, TEXT,
 		ORDERED_LIST, TEXT, NEWLINE,
 	}},
-	{"Col1 | Col2 | Col3\n-|-|-\nA | B | C\nD | *E* | F\n", []TokenType{
-		TEXT, TD, TEXT, TD, TEXT, NEWLINE,
-		TEXT, TD, TEXT, TD, TEXT, NEWLINE,
-		TEXT, TD, TEXT, TD, TEXT, NEWLINE,
-		TEXT, TD, EM, TD, TEXT, NEWLINE,
+	{"Col1 | Col2 | Col3\n-|-|-\nA | B | C\nD | *E* | F", []TokenType{
+		TD, TD, TD, NEWLINE,
+		TD, TD, TD, NEWLINE,
+		TD, TD, TD, NEWLINE,
+		TD, TD, TD,
 	}},
 }
 

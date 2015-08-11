@@ -2,16 +2,17 @@ package markdown
 
 import (
 	"regexp"
+	"strings"
 )
 
 type matcher func(s string) *Token
 
 type Scanner struct {
-	pos        int
-	src        string
-	next       *Token
-	matchers   []matcher
-	inOl, inUl bool
+	pos              int
+	src              string
+	next             *Token
+	matchers         []matcher
+	inOl, inUl, inTd bool
 }
 
 func NewScanner(src string) *Scanner {
@@ -22,6 +23,7 @@ func NewScanner(src string) *Scanner {
 		matchHeader,
 		s.matchOrderedList,
 		s.matchUnorderedList,
+		s.matchTD,
 		groupMatcher(regexp.MustCompile("^\r?(\n)"), NEWLINE),
 		groupMatcher(regexp.MustCompile(`^\[(.*?)\]`), LINK_TEXT),
 		groupMatcher(regexp.MustCompile(`^!\[(.*?)\]`), IMG_ALT),
@@ -34,7 +36,6 @@ func NewScanner(src string) *Scanner {
 		groupMatcher(regexp.MustCompile("^`(.*?)`"), CODE),
 		groupMatcher(regexp.MustCompile("(?s)^(<.*?>)"), HTML_TAG),
 		groupMatcher(regexp.MustCompile("^([$].*?[$])"), MATHML),
-		groupMatcher(regexp.MustCompile(`^(\s*[|]\s*)`), TD),
 	}
 	return s
 }
@@ -51,7 +52,7 @@ func (s *Scanner) Next() *Token {
 			break
 		}
 		if s.pos+1 < len(s.src) && s.src[s.pos] == '\n' && s.src[s.pos+1] == '\n' {
-			s.inOl, s.inUl = false, false
+			s.inOl, s.inUl, s.inTd = false, false, false
 		}
 		if s.src[s.pos] == '\\' {
 			s.pos += 2
@@ -96,7 +97,9 @@ func matchHeader(s string) *Token {
 	return &Token{headers[len(groups[1])], groups[1], groups[0]}
 }
 
-var orderedListMatcher = groupMatcher(regexp.MustCompile(`^\n*([\t ]*)\d+\.[\t ]+`), ORDERED_LIST)
+var orderedListMatcher = groupMatcher(
+	regexp.MustCompile(`^\n*([\t ]*)\d+\.[\t ]+`),
+	ORDERED_LIST)
 
 func (s *Scanner) matchOrderedList(str string) *Token {
 	if !(s.pos == 0 || s.inOl || (len(str) >= 2 && str[0] == '\n' && str[1] == '\n')) {
@@ -109,7 +112,9 @@ func (s *Scanner) matchOrderedList(str string) *Token {
 	return nil
 }
 
-var unorderedListMatcher = groupMatcher(regexp.MustCompile(`^\n*([\t ]*)[*-][\t ]+`), UNORDERED_LIST)
+var unorderedListMatcher = groupMatcher(
+	regexp.MustCompile(`^\n*([\t ]*)[*-][\t ]+`),
+	UNORDERED_LIST)
 
 func (s *Scanner) matchUnorderedList(str string) *Token {
 	if !(s.pos == 0 || s.inUl || (len(str) >= 2 && str[0] == '\n' && str[1] == '\n')) {
@@ -118,6 +123,30 @@ func (s *Scanner) matchUnorderedList(str string) *Token {
 	if tok := unorderedListMatcher(str); tok != nil {
 		s.inUl = true
 		return tok
+	}
+	return nil
+}
+
+var tdMatcher = groupMatcher(regexp.MustCompile(`^\s*(.*?)\s*[|]`), TD)
+
+func (s *Scanner) matchTD(str string) *Token {
+	for i, r := range str {
+		if r == '\n' {
+			if i > 0 && s.inTd {
+				return &Token{TD, strings.TrimSpace(str[:i]), str[:i]}
+			}
+			return nil
+		}
+		if r == '|' {
+			if tok := tdMatcher(str[:i+1]); tok != nil {
+				s.inTd = true
+				return tok
+			}
+		}
+	}
+	if s.inTd {
+		s.inTd = false
+		return &Token{TD, strings.TrimSpace(str), str}
 	}
 	return nil
 }

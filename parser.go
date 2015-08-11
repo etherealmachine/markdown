@@ -53,9 +53,6 @@ func (p *Parser) parse(scanner scanner) {
 }
 
 func (p *Parser) consume(tok *Token) {
-	if tok := p.peek(); tok.Type == TD {
-
-	}
 	p.save()
 	var err error
 	switch tok.Type {
@@ -67,6 +64,8 @@ func (p *Parser) consume(tok *Token) {
 		p.parseOrderedList()
 	case UNORDERED_LIST:
 		p.parseUnorderedList()
+	case TD:
+		err = p.parseTD()
 	default:
 		p.consumeInline(tok)
 	}
@@ -369,4 +368,53 @@ func (p *Parser) parseUnorderedList() {
 		p.append(endUl)
 	}
 	p.inlineMode = false
+}
+
+func (p *Parser) parseTD() error {
+	p.block()
+	p.inlineMode = false
+	p.append(startTable)
+	p.append(startTr)
+	row := 0
+	nlCount := 0
+	for tok := p.input[p.pos-1]; tok.Type != EOF; tok = p.next() {
+		if tok.Type != TD && tok.Type != EOF && tok.Type != NEWLINE {
+			return ErrUnexpectedToken{tok}
+		}
+		if tok.Type == TD && row != 1 {
+			if row == 0 {
+				p.append(startTh)
+			} else {
+				p.append(startTd)
+			}
+			scanner := NewScanner(tok.Lit)
+			for tok := scanner.Next(); tok.Type != EOF; tok = scanner.Next() {
+				p.inlineMode = true
+				p.consumeInline(tok)
+				p.inlineMode = false
+			}
+			if row == 0 {
+				p.append(endTh)
+			} else {
+				p.append(endTd)
+			}
+		}
+		if tok.Type == NEWLINE {
+			if row != 1 && nlCount == 0 && p.peek().Type != NEWLINE {
+				p.append(endTr)
+				p.append(startTr)
+			}
+			nlCount++
+			row++
+		} else {
+			nlCount = 0
+		}
+		if nlCount == 2 {
+			break
+		}
+	}
+	p.append(endTr)
+	p.append(endTable)
+	p.inlineMode = false
+	return nil
 }

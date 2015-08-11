@@ -67,18 +67,20 @@ func text(s string) *html.Token {
 
 var (
 	blockTag = map[atom.Atom]bool{
-		atom.H1:  true,
-		atom.H2:  true,
-		atom.H3:  true,
-		atom.H4:  true,
-		atom.H5:  true,
-		atom.H6:  true,
-		atom.P:   true,
-		atom.Div: true,
-		atom.Pre: true,
-		atom.Ol:  true,
-		atom.Ul:  true,
-		atom.Li:  true,
+		atom.H1:    true,
+		atom.H2:    true,
+		atom.H3:    true,
+		atom.H4:    true,
+		atom.H5:    true,
+		atom.H6:    true,
+		atom.P:     true,
+		atom.Div:   true,
+		atom.Pre:   true,
+		atom.Ol:    true,
+		atom.Ul:    true,
+		atom.Li:    true,
+		atom.Table: true,
+		atom.Tr:    true,
 	}
 	inlineTag = map[atom.Atom]bool{
 		atom.B:        true,
