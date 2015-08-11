@@ -87,7 +87,7 @@ func groupMatcher(re *regexp.Regexp, tok TokenType) matcher {
 	}
 }
 
-var headerRe = regexp.MustCompile(`^([#]+)\s*`)
+var headerRe = regexp.MustCompile(`^[\t ]*([#]+)\s*`)
 
 func matchHeader(s string) *Token {
 	groups := headerRe.FindStringSubmatch(s)
