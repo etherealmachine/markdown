@@ -31,7 +31,7 @@ func NewScanner(src string) *Scanner {
 		groupMatcher(regexp.MustCompile(`^\*\*(.+?)\*\*`), STRONG),
 		groupMatcher(regexp.MustCompile(`^\*(.+?)\*`), EM),
 		groupMatcher(regexp.MustCompile(`^__(.+?)__`), STRONG),
-		groupMatcher(regexp.MustCompile(`^_(.+?)_`), EM),
+		groupMatcher(regexp.MustCompile(`^\s_(.+?)_`), EM),
 		groupMatcher(regexp.MustCompile("^(```)"), CODE_BLOCK),
 		groupMatcher(regexp.MustCompile("^`(.*?)`"), CODE),
 		groupMatcher(regexp.MustCompile("(?s)^(<.*?>)"), HTML_TAG),

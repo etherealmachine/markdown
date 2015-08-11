@@ -18,7 +18,7 @@ func main() {
 	}
 	if *scan {
 		scanner := markdown.NewScanner(string(buf))
-		for tok := scanner.Next(); tok.Tok != markdown.EOF; tok = scanner.Next() {
+		for tok := scanner.Next(); tok.Type != markdown.EOF; tok = scanner.Next() {
 			fmt.Println(tok)
 		}
 	} else {
