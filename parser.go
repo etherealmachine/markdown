@@ -26,6 +26,7 @@ type Parser struct {
 	tokens     []*html.Token
 	inlineMode bool
 	saved      savePoint
+	tableAttrs []html.Attribute
 }
 
 type savePoint struct {
@@ -159,6 +160,17 @@ func (p *Parser) block() {
 	}
 }
 
+func (p *Parser) handleDirective(s string) bool {
+	if strings.HasPrefix(s, "table ") {
+		tt := html.NewTokenizer(strings.NewReader("<" + s + ">"))
+		tt.Next()
+		tok := tt.Token()
+		p.tableAttrs = tok.Attr
+		return true
+	}
+	return false
+}
+
 func (p *Parser) parseHeader(headerToken TokenType) {
 	p.append(hStartTag[headerToken])
 	p.inlineMode = true
@@ -287,17 +299,23 @@ func (p *Parser) parseHTMLTag(tag string) {
 	tt := html.NewTokenizer(strings.NewReader(tag))
 	tt.Next()
 	tok := tt.Token()
-	if !p.inlineMode && !blockTag[tok.DataAtom] {
-		p.append(startP)
-		p.inlineMode = true
-	} else if p.inlineMode && blockTag[tok.DataAtom] {
-		p.append(endP)
-		p.inlineMode = false
-	}
-	if blockTag[tok.DataAtom] {
-		p.inlineMode = false
+	if tok.Type == html.CommentToken {
+		if p.handleDirective(tok.Data) {
+			return
+		}
 	} else {
-		p.inlineMode = true
+		if !p.inlineMode && !blockTag[tok.DataAtom] {
+			p.append(startP)
+			p.inlineMode = true
+		} else if p.inlineMode && blockTag[tok.DataAtom] {
+			p.append(endP)
+			p.inlineMode = false
+		}
+		if blockTag[tok.DataAtom] {
+			p.inlineMode = false
+		} else {
+			p.inlineMode = true
+		}
 	}
 	p.append(&tok)
 }
@@ -373,7 +391,12 @@ func (p *Parser) parseUnorderedList() {
 func (p *Parser) parseTD() error {
 	p.block()
 	p.inlineMode = false
-	p.append(startTable)
+	if p.tableAttrs != nil {
+		p.append(&html.Token{
+			Type: html.StartTagToken, DataAtom: atom.Table, Data: "table", Attr: p.tableAttrs})
+	} else {
+		p.append(startTable)
+	}
 	p.append(startTr)
 	row := 0
 	nlCount := 0

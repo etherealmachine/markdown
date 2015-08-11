@@ -68,6 +68,9 @@ var scannerCases = []*scannerCase{
 		TD, TD, TD, NEWLINE,
 		TD, TD, TD,
 	}},
+	{"<!--comment-->", []TokenType{
+		HTML_TAG,
+	}},
 }
 
 func TestScanner(t *testing.T) {

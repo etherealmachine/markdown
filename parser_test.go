@@ -203,6 +203,14 @@ var parserCases = []*parserCase{
 			endTable,
 		},
 	},
+	{
+		[]Token{
+			{HTML_TAG, "<!--comment-->", "<!--comment-->"},
+		},
+		[]*html.Token{
+			&html.Token{Type: html.CommentToken, Data: "comment"},
+		},
+	},
 }
 
 func TestParser(t *testing.T) {
