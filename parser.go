@@ -135,6 +135,13 @@ func (p *Parser) next() *Token {
 	return p.input[p.pos-1]
 }
 
+func (p *Parser) prev() *html.Token {
+	if len(p.tokens) == 0 {
+		return &html.Token{Type: html.CommentToken}
+	}
+	return p.tokens[len(p.tokens)-1]
+}
+
 func (p *Parser) peek() *Token {
 	if p.pos >= len(p.input) {
 		return &Token{EOF, "EOF", ""}
@@ -205,17 +212,20 @@ func (p *Parser) parseStrong(lit string) {
 }
 
 func (p *Parser) parseNewline() {
-	tok := p.next()
-	if tok.Type == NEWLINE {
+	next := p.next()
+	if next.Type == NEWLINE {
 		p.block()
 	} else {
+		if next.Type == TEXT && strings.TrimSpace(next.Lit) == "" {
+			return
+		}
 		p.tokens = append(p.tokens, text("\n"))
-		p.consume(tok)
+		p.consume(next)
 	}
 }
 
 func (p *Parser) parseText(s string) {
-	if strings.TrimLeft(s, " ") == "" {
+	if p.prev().Type != html.TextToken && strings.TrimLeft(s, " ") == "" {
 		return
 	}
 	if !p.inlineMode {

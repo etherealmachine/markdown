@@ -16,5 +16,7 @@ var R*satellite = R*earth + altitude*satellite; v(R*satellite) / 1000 + " km/s";
 ```
 
 where $foo = bar$
+
+(4.1) $F = ma$
   </div>
-</div> 
+</div>

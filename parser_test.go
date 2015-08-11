@@ -217,7 +217,33 @@ var parserCases = []*parserCase{
 			{HTML_TAG, "<!--comment-->", "<!--comment-->"},
 		},
 		[]*html.Token{
-			&html.Token{Type: html.CommentToken, Data: "comment"},
+			{Type: html.CommentToken, Data: "comment"},
+		},
+	},
+	{
+		[]Token{
+			{HREF, "4.1", "(4.1)"},
+			{TEXT, " ", " "},
+			{MATHML, "$F = ma$", "$F = ma$"},
+		},
+		[]*html.Token{
+			startP,
+			{Type: html.TextToken, Data: "(4.1)"},
+			{Type: html.TextToken, Data: " "},
+			{Type: html.TextToken, Data: "$F = ma$"},
+			endP,
+		},
+	},
+	{
+		[]Token{
+			{HTML_TAG, "<div>", "<div"},
+			{NEWLINE, "\n", "\n"},
+			{TEXT, "  ", "  "},
+			{HTML_TAG, "</div>", "</div>"},
+		},
+		[]*html.Token{
+			{Type: html.StartTagToken, DataAtom: atom.Div, Data: "div"},
+			{Type: html.EndTagToken, DataAtom: atom.Div, Data: "div"},
 		},
 	},
 }
