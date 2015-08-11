@@ -15,3 +15,6 @@ Hyperbola     | > 1             | < 0             | > 0
 
   bar baz
   bang bat
+
+  *foo* baz
+  bang bat
