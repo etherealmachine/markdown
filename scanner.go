@@ -61,7 +61,8 @@ func (s *Scanner) Next() *Token {
 		for _, match := range s.matchers {
 			if tok := match(s.src[s.pos:]); tok != nil {
 				if last != s.pos {
-					text := &Token{TEXT, s.src[last:s.pos], s.src[last:s.pos]}
+					str := strings.Replace(s.src[last:s.pos], "\\", "", -1)
+					text := &Token{TEXT, str, str}
 					s.pos += len(tok.Raw)
 					s.next = tok
 					return text
@@ -73,7 +74,8 @@ func (s *Scanner) Next() *Token {
 		s.pos++
 	}
 	if last != s.pos {
-		return &Token{TEXT, s.src[last:], s.src[last:]}
+		str := strings.Replace(s.src[last:], "\\", "", -1)
+		return &Token{TEXT, str, str}
 	}
 	return &Token{EOF, "EOF", ""}
 }
