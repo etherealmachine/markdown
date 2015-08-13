@@ -306,7 +306,7 @@ func (p *Parser) parseCodeBlock() error {
 		buf.WriteString(tok.Raw)
 	}
 	code := strings.Trim(buf.String(), "\n")
-	p.append(text("\n" + code + "\n"))
+	p.append(text(code))
 	p.append(endCode)
 	p.append(endPre)
 	return nil
