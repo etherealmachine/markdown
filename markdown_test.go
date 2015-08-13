@@ -40,7 +40,7 @@ var testCases = []testCase{
 		"<p>A paragraph of text\npossibly on multiple\nlines.</p>",
 	},
 	{
-		"<a href=\"www.example.com\" rel=\"nofollow\">Some HTML</a>",
+		"<p><a href=\"www.example.com\" rel=\"nofollow\">Some HTML</a></p>",
 		"<p><a href=\"www.example.com\" rel=\"nofollow\">Some HTML</a></p>",
 	},
 	{

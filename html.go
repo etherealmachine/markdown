@@ -120,6 +120,20 @@ var (
 		atom.Select:   true,
 		atom.Textarea: true,
 	}
+	inlineBlock = map[atom.Atom]bool{
+		atom.H1:  true,
+		atom.H2:  true,
+		atom.H3:  true,
+		atom.H4:  true,
+		atom.H5:  true,
+		atom.H6:  true,
+		atom.P:   true,
+		atom.Pre: true,
+		atom.Li:  true,
+		atom.Td:  true,
+		atom.Dt:  true,
+		atom.Dd:  true,
+	}
 )
 
 func inline(token *html.Token) bool {

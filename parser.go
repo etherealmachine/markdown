@@ -321,10 +321,12 @@ func (p *Parser) parseHTMLTag(tag string) {
 			return
 		}
 	} else {
-		if !p.inlineMode && !blockTag[tok.DataAtom] && !inlineTag[tok.DataAtom] {
+		if !p.inlineMode && inline(&tok) &&
+			(tok.Type == html.StartTagToken && inlineBlock[tok.DataAtom]) {
 			p.append(startP)
 			p.inlineMode = true
-		} else if p.inlineMode && blockTag[tok.DataAtom] && inlineTag[tok.DataAtom] {
+		} else if p.inlineMode && !inline(&tok) &&
+			!(tok.Type == html.EndTagToken && inlineBlock[tok.DataAtom]) {
 			p.append(endP)
 			p.inlineMode = false
 		}
