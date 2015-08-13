@@ -216,7 +216,7 @@ func (p *Parser) parseNewline() {
 	if next.Type == NEWLINE {
 		p.block()
 	} else {
-		if next.Type == TEXT && strings.TrimSpace(next.Lit) == "" {
+		if next.Type == EOF || (next.Type == TEXT && strings.TrimSpace(next.Lit) == "") {
 			return
 		}
 		p.tokens = append(p.tokens, text("\n"))
@@ -321,10 +321,10 @@ func (p *Parser) parseHTMLTag(tag string) {
 			return
 		}
 	} else {
-		if !p.inlineMode && !blockTag[tok.DataAtom] {
+		if !p.inlineMode && !blockTag[tok.DataAtom] && !inlineTag[tok.DataAtom] {
 			p.append(startP)
 			p.inlineMode = true
-		} else if p.inlineMode && blockTag[tok.DataAtom] {
+		} else if p.inlineMode && blockTag[tok.DataAtom] && inlineTag[tok.DataAtom] {
 			p.append(endP)
 			p.inlineMode = false
 		}
