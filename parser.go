@@ -51,6 +51,28 @@ func (p *Parser) parse(scanner scanner) {
 		p.append(endP)
 		p.inlineMode = false
 	}
+	for i := 0; i < len(p.tokens); i++ {
+		tok := p.tokens[i]
+		if tok == startP {
+			emptyParagraph := true
+			start := i
+			i++
+			for ; i < len(p.tokens); i++ {
+				tok := p.tokens[i]
+				if tok == endP {
+					break
+				}
+				if tok.Type != html.TextToken || strings.TrimSpace(tok.Data) != "" {
+					emptyParagraph = false
+					break
+				}
+			}
+			if emptyParagraph {
+				p.tokens = append(p.tokens[:start], p.tokens[i+1:]...)
+				i = start + 1
+			}
+		}
+	}
 }
 
 func (p *Parser) consume(tok *Token) {
@@ -86,7 +108,7 @@ func (p *Parser) consumeInline(tok *Token) {
 	case NEWLINE:
 		p.parseNewline()
 	case TEXT:
-		p.parseText(tok.Lit)
+		p.parseText(tok)
 	case LINK_TEXT:
 		err = p.parseLink(tok.Lit)
 	case IMG_ALT:
@@ -96,7 +118,7 @@ func (p *Parser) consumeInline(tok *Token) {
 	case HTML_TAG:
 		p.parseHTMLTag(tok.Lit)
 	default:
-		p.parseText(tok.Raw)
+		p.parseText(tok)
 	}
 	if err != nil {
 		p.revert()
@@ -124,7 +146,8 @@ func (p *Parser) revert() {
 	}
 	p.tokens = p.tokens[:p.saved.tokenCount]
 	p.inlineMode = p.saved.inlineMode
-	p.parseText(buf.String())
+	s := buf.String()
+	p.parseText(&Token{TEXT, s, s})
 }
 
 func (p *Parser) next() *Token {
@@ -224,14 +247,19 @@ func (p *Parser) parseNewline() {
 	}
 }
 
-func (p *Parser) parseText(s string) {
-	if p.prev().Type != html.TextToken && strings.TrimLeft(s, " ") == "" {
-		return
+func (p *Parser) parseText(tok *Token) {
+	var s string
+	if tok.Type == TEXT {
+		s = tok.Lit
+	} else {
+		s = tok.Raw
 	}
 	if !p.inlineMode {
 		p.append(startP)
 		p.inlineMode = true
-		s = strings.TrimLeft(s, " ")
+		if tok.Type == TEXT {
+			s = strings.TrimLeft(s, " ")
+		}
 	}
 	p.append(text(s))
 }

@@ -99,7 +99,7 @@ var parserCases = []*parserCase{
 			{CODE_BLOCK, "```", "```"}, {NEWLINE, "\n", "\n"}, {TEXT, "Some code ", "Some code "}, {EM, "*", "*"}, {CODE_BLOCK, "```", "```"},
 		},
 		[]*html.Token{
-			startPre, startCode, text("\nSome code *\n"), endCode, endPre,
+			startPre, startCode, text("Some code *"), endCode, endPre,
 		},
 	},
 	{
@@ -244,6 +244,22 @@ var parserCases = []*parserCase{
 		[]*html.Token{
 			{Type: html.StartTagToken, DataAtom: atom.Div, Data: "div"},
 			{Type: html.EndTagToken, DataAtom: atom.Div, Data: "div"},
+		},
+	},
+	{
+		[]Token{
+			{STRONG, "foo", "**foo**"}, {TEXT, " ", " "}, {HREF, "bar", "(bar)"},
+		},
+		[]*html.Token{
+			startP, startStrong, text("foo"), endStrong, text(" "), text("(bar)"), endP,
+		},
+	},
+	{
+		[]Token{
+			{H1, "#", "# "}, {TEXT, "foo", "foo"}, {NEWLINE, "\n", "\n"}, {TEXT, "  ", "  "},
+		},
+		[]*html.Token{
+			startH1, text("foo"), endH1,
 		},
 	},
 }

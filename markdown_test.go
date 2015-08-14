@@ -49,7 +49,7 @@ var testCases = []testCase{
 	},
 	{
 		"```javascript\nA block of code\n```",
-		"<pre><code class=\"javascript\">\nA block of code\n</code></pre>",
+		"<pre><code class=\"javascript\">A block of code</code></pre>",
 	},
 }
 
