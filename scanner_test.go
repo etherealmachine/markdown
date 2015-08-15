@@ -45,7 +45,7 @@ var scannerCases = []*scannerCase{
 		H1, TEXT, NEWLINE, TEXT, LINK_TEXT, HREF, NEWLINE, TEXT, STRONG, TEXT, NEWLINE, NEWLINE, TEXT,
 	}},
 	{"```javascript\nA block of code\n```", []TokenType{
-		CODE_BLOCK, TEXT, NEWLINE, TEXT, NEWLINE, CODE_BLOCK,
+		CODE_BLOCK,
 	}},
 	{"* One\n* Two\n* *Three* items\n", []TokenType{
 		UNORDERED_LIST, TEXT,

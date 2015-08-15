@@ -96,7 +96,7 @@ var parserCases = []*parserCase{
 	},
 	{
 		[]Token{
-			{CODE_BLOCK, "```", "```"}, {NEWLINE, "\n", "\n"}, {TEXT, "Some code ", "Some code "}, {EM, "*", "*"}, {CODE_BLOCK, "```", "```"},
+			{CODE_BLOCK, "Some code *", "```\nSome code *```"},
 		},
 		[]*html.Token{
 			startPre, startCode, text("Some code *"), endCode, endPre,

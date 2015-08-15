@@ -24,18 +24,18 @@ func NewScanner(src string) *Scanner {
 		s.matchOrderedList,
 		s.matchUnorderedList,
 		s.matchTD,
-		groupMatcher(regexp.MustCompile("^\r?(\n)"), NEWLINE),
-		groupMatcher(regexp.MustCompile(`^\[(.*?)\]`), LINK_TEXT),
-		groupMatcher(regexp.MustCompile(`^!\[(.*?)\]`), IMG_ALT),
-		groupMatcher(regexp.MustCompile(`^\((.*?)\)`), HREF),
-		groupMatcher(regexp.MustCompile(`^(?s)\*\*(.+?)\*\*`), STRONG),
-		groupMatcher(regexp.MustCompile(`^(?s)\*(.+?)\*`), EM),
-		groupMatcher(regexp.MustCompile(`^(?s)__(.+?)__`), STRONG),
-		groupMatcher(regexp.MustCompile(`^(?s)\s_(.+?)_`), EM),
-		groupMatcher(regexp.MustCompile("^(```)"), CODE_BLOCK),
-		groupMatcher(regexp.MustCompile("^`(.*?)`"), CODE),
-		groupMatcher(regexp.MustCompile("(?s)^(<.*?>)"), HTML_TAG),
-		groupMatcher(regexp.MustCompile("^(?s)([$].*?[$])"), MATHML),
+		groupMatcher(regexp.MustCompile("^\r?(\n)"), NEWLINE, false),
+		groupMatcher(regexp.MustCompile(`^\[(.*?)\]`), LINK_TEXT, false),
+		groupMatcher(regexp.MustCompile(`^!\[(.*?)\]`), IMG_ALT, false),
+		groupMatcher(regexp.MustCompile(`^\((.*?)\)`), HREF, false),
+		groupMatcher(regexp.MustCompile(`^(?s)\*\*(.+?)\*\*`), STRONG, true),
+		groupMatcher(regexp.MustCompile(`^(?s)\*(.+?)\*`), EM, true),
+		groupMatcher(regexp.MustCompile(`^(?s)__(.+?)__`), STRONG, true),
+		groupMatcher(regexp.MustCompile(`^(?s)\s_(.+?)_`), EM, true),
+		groupMatcher(regexp.MustCompile("^(?s)```(.*?)```"), CODE_BLOCK, false),
+		groupMatcher(regexp.MustCompile("^`(.*?)`"), CODE, true),
+		groupMatcher(regexp.MustCompile("(?s)^(<.*?>)"), HTML_TAG, false),
+		groupMatcher(regexp.MustCompile("^(?s)([$].*?[$])"), MATHML, true),
 	}
 	return s
 }
@@ -80,13 +80,16 @@ func (s *Scanner) Next() *Token {
 	return &Token{EOF, "EOF", ""}
 }
 
-func groupMatcher(re *regexp.Regexp, tok TokenType) matcher {
+func groupMatcher(re *regexp.Regexp, tok TokenType, singleLine bool) matcher {
 	return func(s string) *Token {
 		groups := re.FindStringSubmatch(s)
 		if len(groups) == 0 {
 			return nil
 		}
-		lit := strings.Replace(groups[1], "\n", " ", -1)
+		lit := groups[1]
+		if singleLine {
+			lit = strings.Replace(lit, "\n", " ", -1)
+		}
 		return &Token{tok, lit, groups[0]}
 	}
 }
@@ -103,7 +106,8 @@ func matchHeader(s string) *Token {
 
 var orderedListMatcher = groupMatcher(
 	regexp.MustCompile(`^\n*([\t ]*)\d+\.[\t ]+`),
-	ORDERED_LIST)
+	ORDERED_LIST,
+	false)
 
 func (s *Scanner) matchOrderedList(str string) *Token {
 	if !(s.pos == 0 || s.inOl || (len(str) >= 2 && str[0] == '\n' && str[1] == '\n')) {
@@ -118,7 +122,8 @@ func (s *Scanner) matchOrderedList(str string) *Token {
 
 var unorderedListMatcher = groupMatcher(
 	regexp.MustCompile(`^\n*([\t ]*)[*-][\t ]+`),
-	UNORDERED_LIST)
+	UNORDERED_LIST,
+	false)
 
 func (s *Scanner) matchUnorderedList(str string) *Token {
 	if !(s.pos == 0 || s.inUl || (len(str) >= 2 && str[0] == '\n' && str[1] == '\n')) {
@@ -131,7 +136,7 @@ func (s *Scanner) matchUnorderedList(str string) *Token {
 	return nil
 }
 
-var tdMatcher = groupMatcher(regexp.MustCompile(`^\s*(.*?)\s*[|]`), TD)
+var tdMatcher = groupMatcher(regexp.MustCompile(`^\s*(.*?)\s*[|]`), TD, true)
 
 func (s *Scanner) matchTD(str string) *Token {
 	for i, r := range str {

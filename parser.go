@@ -82,7 +82,7 @@ func (p *Parser) consume(tok *Token) {
 	case H1, H2, H3, H4, H5, H6:
 		p.parseHeader(tok.Type)
 	case CODE_BLOCK:
-		err = p.parseCodeBlock()
+		p.parseCodeBlock(tok)
 	case ORDERED_LIST:
 		p.parseOrderedList()
 	case UNORDERED_LIST:
@@ -304,32 +304,25 @@ func (p *Parser) parseCode(code string) {
 	p.append(endCode)
 }
 
-func (p *Parser) parseCodeBlock() error {
+func (p *Parser) parseCodeBlock(tok *Token) error {
 	p.append(startPre)
-	var buf bytes.Buffer
-	tok := p.next()
-	if tok.Type == TEXT {
+	var code string
+	if strings.Count(tok.Lit, "\n") > 0 {
+		lang := strings.Split(tok.Lit, "\n")[0]
 		p.tokens = append(p.tokens, &html.Token{
 			Type:     html.StartTagToken,
 			DataAtom: atom.Code,
 			Data:     "code",
 			Attr: []html.Attribute{
-				{Key: "class", Val: tok.Lit},
+				{Key: "class", Val: lang},
 			},
 		})
-	} else if tok.Type == NEWLINE {
-		p.append(startCode)
+		code = tok.Lit[len(lang)+1:]
 	} else {
-		return ErrUnexpectedToken{tok}
+		p.append(startCode)
+		code = tok.Lit
 	}
-	for tok = p.next(); tok.Type != CODE_BLOCK; tok = p.next() {
-		if tok.Type == EOF {
-			return ErrUnexpectedToken{tok}
-		}
-		buf.WriteString(tok.Raw)
-	}
-	code := strings.Trim(buf.String(), "\n")
-	p.append(text(code))
+	p.append(text(strings.TrimSpace(code)))
 	p.append(endCode)
 	p.append(endPre)
 	return nil
