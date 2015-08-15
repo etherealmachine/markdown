@@ -108,7 +108,7 @@ func (p *Parser) consumeInline(tok *Token) {
 	case NEWLINE:
 		p.parseNewline()
 	case TEXT:
-		p.parseText(tok)
+		p.parseText(tok.Lit)
 	case LINK_TEXT:
 		err = p.parseLink(tok.Lit)
 	case IMG_ALT:
@@ -117,8 +117,12 @@ func (p *Parser) consumeInline(tok *Token) {
 		p.parseCode(tok.Lit)
 	case HTML_TAG:
 		p.parseHTMLTag(tok.Lit)
+	case MATHML:
+		p.parseText(tok.Lit)
+	case HREF:
+		p.parseText(tok.Raw)
 	default:
-		p.parseText(tok)
+		panic(fmt.Sprintf("unknown token type: %v", tok.Type))
 	}
 	if err != nil {
 		p.revert()
@@ -146,8 +150,7 @@ func (p *Parser) revert() {
 	}
 	p.tokens = p.tokens[:p.saved.tokenCount]
 	p.inlineMode = p.saved.inlineMode
-	s := buf.String()
-	p.parseText(&Token{TEXT, s, s})
+	p.parseText(buf.String())
 }
 
 func (p *Parser) next() *Token {
@@ -247,19 +250,11 @@ func (p *Parser) parseNewline() {
 	}
 }
 
-func (p *Parser) parseText(tok *Token) {
-	var s string
-	if tok.Type == TEXT {
-		s = tok.Lit
-	} else {
-		s = tok.Raw
-	}
+func (p *Parser) parseText(s string) {
 	if !p.inlineMode {
 		p.append(startP)
 		p.inlineMode = true
-		if tok.Type == TEXT {
-			s = strings.TrimLeft(s, " ")
-		}
+		s = strings.TrimLeft(s, " ")
 	}
 	p.append(text(s))
 }

@@ -51,6 +51,14 @@ var testCases = []testCase{
 		"```javascript\nA block of code\n```",
 		"<pre><code class=\"javascript\">A block of code</code></pre>",
 	},
+	{
+		"$Multiline\nmathml$",
+		"<p>$Multiline mathml$</p>",
+	},
+	{
+		"*Multiline\nemphasis*",
+		"<p><em>Multiline emphasis</em></p>",
+	},
 }
 
 func TestMarkdown(t *testing.T) {

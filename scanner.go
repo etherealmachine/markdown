@@ -28,14 +28,14 @@ func NewScanner(src string) *Scanner {
 		groupMatcher(regexp.MustCompile(`^\[(.*?)\]`), LINK_TEXT),
 		groupMatcher(regexp.MustCompile(`^!\[(.*?)\]`), IMG_ALT),
 		groupMatcher(regexp.MustCompile(`^\((.*?)\)`), HREF),
-		groupMatcher(regexp.MustCompile(`^\*\*(.+?)\*\*`), STRONG),
-		groupMatcher(regexp.MustCompile(`^\*(.+?)\*`), EM),
-		groupMatcher(regexp.MustCompile(`^__(.+?)__`), STRONG),
-		groupMatcher(regexp.MustCompile(`^\s_(.+?)_`), EM),
+		groupMatcher(regexp.MustCompile(`^(?s)\*\*(.+?)\*\*`), STRONG),
+		groupMatcher(regexp.MustCompile(`^(?s)\*(.+?)\*`), EM),
+		groupMatcher(regexp.MustCompile(`^(?s)__(.+?)__`), STRONG),
+		groupMatcher(regexp.MustCompile(`^(?s)\s_(.+?)_`), EM),
 		groupMatcher(regexp.MustCompile("^(```)"), CODE_BLOCK),
 		groupMatcher(regexp.MustCompile("^`(.*?)`"), CODE),
 		groupMatcher(regexp.MustCompile("(?s)^(<.*?>)"), HTML_TAG),
-		groupMatcher(regexp.MustCompile("^([$].*?[$])"), MATHML),
+		groupMatcher(regexp.MustCompile("^(?s)([$].*?[$])"), MATHML),
 	}
 	return s
 }
@@ -79,13 +79,15 @@ func (s *Scanner) Next() *Token {
 	}
 	return &Token{EOF, "EOF", ""}
 }
+
 func groupMatcher(re *regexp.Regexp, tok TokenType) matcher {
 	return func(s string) *Token {
 		groups := re.FindStringSubmatch(s)
 		if len(groups) == 0 {
 			return nil
 		}
-		return &Token{tok, groups[1], groups[0]}
+		lit := strings.Replace(groups[1], "\n", " ", -1)
+		return &Token{tok, lit, groups[0]}
 	}
 }
 
